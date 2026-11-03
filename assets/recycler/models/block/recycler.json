@@ -1,0 +1,77 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "recycler:block/recycler",
+    "machine": "recycler:block/recycler"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "texture": "#machine",
+          "uv": [
+            16,
+            0,
+            32,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#machine",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#machine",
+          "uv": [
+            32,
+            0,
+            48,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#machine",
+          "uv": [
+            0,
+            16,
+            16,
+            32
+          ]
+        },
+        "west": {
+          "texture": "#machine",
+          "uv": [
+            48,
+            0,
+            64,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#machine",
+          "uv": [
+            48,
+            0,
+            64,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}
