@@ -1,14 +1,19 @@
 package com.recycler;
 
-import net.minecraft.core.NonNullList;
+import net.minecraft.core.Holder;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.NormalCraftingRecipe;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -20,61 +25,80 @@ public final class RecyclerLogic {
     private RecyclerLogic() {
     }
 
-    public static List<ItemStack> recoverIngredients(
+    public static Optional<List<ItemStack>> recoverIngredients(
             Level level,
             ItemStack input
     ) {
         if (level == null || level.isClientSide() || input.isEmpty()) {
-            return List.of();
+            return Optional.empty();
         }
 
-        Optional<RecipeHolder<CraftingRecipe>> recipeOptional =
-                level.recipeAccess().getRecipeFor(
-                        RecipeType.CRAFTING,
-                        input,
-                        level
-                );
+        Optional<List<ItemStack>> specialResult =
+                RecoveryRule.getRecoveryResult(input);
 
-        if (recipeOptional.isEmpty()) {
-            return List.of();
+        if (specialResult.isPresent()) {
+            return specialResult;
         }
 
-        CraftingRecipe recipe = recipeOptional.get().value();
+        List<RecipeHolder<?>> recipes = new ArrayList<>(
+                level.getServer().getRecipeManager().getRecipes()
+        );
 
-        NonNullList<ItemStack> ingredients = recipe.getIngredients();
+        recipes.sort(
+                Comparator.comparing(
+                        holder -> holder.id().identifier().toString()
+                )
+        );
 
-        List<ItemStack> occupiedIngredients = new ArrayList<>();
+        for (RecipeHolder<?> holder : recipes) {
+            Recipe<?> recipe = holder.value();
 
-        for (var ingredient : ingredients) {
-            if (!ingredient.isEmpty()) {
-                ItemStack[] matchingItems = ingredient.getItems();
+            if (!(recipe instanceof NormalCraftingRecipe craftingRecipe)
+                    || recipe.getType() != RecipeType.CRAFTING) {
+                continue;
+            }
 
-                if (matchingItems.length > 0) {
-                    occupiedIngredients.add(matchingItems[0].copy());
+            ItemStack result = craftingRecipe.assemble(CraftingInput.EMPTY);
+
+            if (result.isEmpty() || result.getItem() != input.getItem()) {
+                continue;
+            }
+
+            List<ItemStack> ingredients = new ArrayList<>();
+
+            for (Ingredient ingredient : craftingRecipe.placementInfo().ingredients()) {
+                Optional<Holder<Item>> representative =
+                        ingredient.items().findFirst();
+
+                if (representative.isPresent()) {
+                    ingredients.add(
+                            new ItemStack(representative.get().value())
+                    );
                 }
             }
-        }
 
-        if (occupiedIngredients.isEmpty()) {
-            return List.of();
-        }
-
-        Collections.shuffle(occupiedIngredients, RANDOM);
-
-        int ingredientCount = occupiedIngredients.size();
-
-        List<ItemStack> recoveredItems = new ArrayList<>();
-
-        for (int i = 0; i < ingredientCount; i++) {
-            int x = ingredientCount - i;
-
-            double chance = (100.0 * x) / (ingredientCount + 1);
-
-            if (RANDOM.nextDouble() * 100.0 < chance) {
-                recoveredItems.add(occupiedIngredients.get(i));
+            if (ingredients.isEmpty()) {
+                return Optional.of(List.of());
             }
+
+            Collections.shuffle(ingredients, RANDOM);
+
+            int ingredientCount = ingredients.size();
+            List<ItemStack> recoveredItems = new ArrayList<>();
+
+            for (int i = 0; i < ingredientCount; i++) {
+                int x = ingredientCount - i;
+                double chance =
+                        (100.0 * x) / (ingredientCount + 1);
+
+                if (RANDOM.nextDouble() * 100.0 < chance) {
+                    recoveredItems.add(ingredients.get(i).copy());
+                }
+            }
+
+            return Optional.of(recoveredItems);
         }
 
-        return recoveredItems;
+        return Optional.empty();
     }
 }

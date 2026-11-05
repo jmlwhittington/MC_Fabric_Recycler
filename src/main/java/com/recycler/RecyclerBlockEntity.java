@@ -1,3 +1,4 @@
+
 package com.recycler;
 
 import net.minecraft.core.BlockPos;
@@ -10,9 +11,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.storage.ValueInput;
-import net.minecraft.world.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.Level;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class RecyclerBlockEntity extends BlockEntity implements Container, WorldlyContainer {
 
@@ -20,11 +25,13 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
     public static final int OUTPUT_START = 1;
     public static final int OUTPUT_SLOTS = 6;
     public static final int INVENTORY_SIZE = 1 + OUTPUT_SLOTS;
-	
-	public static final int PROCESSING_TIME = 100;
 
-	private int processingTicks = 0;
-	private boolean isProcessing = false;
+    public static final int PROCESSING_TIME = 100;
+
+    private int processingTicks = 0;
+    private boolean isProcessing = false;
+
+    private List<ItemStack> pendingRecovery = null;
 
     private final NonNullList<ItemStack> items =
             NonNullList.withSize(INVENTORY_SIZE, ItemStack.EMPTY);
@@ -48,6 +55,7 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
                 return false;
             }
         }
+
         return true;
     }
 
@@ -72,25 +80,29 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
         return ContainerHelper.takeItem(items, slot);
     }
 
-	@Override
-	public void setItem(int slot, ItemStack stack) {
-		items.set(slot, stack);
+    @Override
+    public void setItem(int slot, ItemStack stack) {
+        items.set(slot, stack);
 
-		if (!stack.isEmpty()) {
-			stack.limitSize(Math.min(getMaxStackSize(), stack.getMaxStackSize()));
-		}
+        if (!stack.isEmpty()) {
+            stack.limitSize(Math.min(getMaxStackSize(), stack.getMaxStackSize()));
+        }
 
-		if (slot == INPUT_SLOT) {
-			processingTicks = 0;
-			isProcessing = false;
-		}
+        if (slot == INPUT_SLOT) {
+            processingTicks = 0;
+            isProcessing = false;
+            pendingRecovery = null;
+        }
 
-		setChanged();
-	}
+        setChanged();
+    }
 
     @Override
     public void clearContent() {
         items.clear();
+        processingTicks = 0;
+        isProcessing = false;
+        pendingRecovery = null;
         setChanged();
     }
 
@@ -109,51 +121,180 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
                         worldPosition.getZ() + 0.5
                 ) <= 64.0;
     }
-	
-	public static void serverTick(
-			Level level,
-			BlockPos pos,
-			BlockState state,
-			RecyclerBlockEntity blockEntity
-	) {
-		if (level.isClientSide()) {
-			return;
-		}
 
-		ItemStack input = blockEntity.getItem(INPUT_SLOT);
+    public static void serverTick(
+            Level level,
+            BlockPos pos,
+            BlockState state,
+            RecyclerBlockEntity blockEntity
+    ) {
+        if (level.isClientSide()) {
+            return;
+        }
 
-		if (input.isEmpty()) {
-			if (blockEntity.processingTicks != 0 || blockEntity.isProcessing) {
-				blockEntity.processingTicks = 0;
-				blockEntity.isProcessing = false;
-				blockEntity.setChanged();
-			}
+        ItemStack input = blockEntity.getItem(INPUT_SLOT);
 
-			return;
-		}
+        if (input.isEmpty()) {
+            if (blockEntity.processingTicks != 0
+                    || blockEntity.isProcessing
+                    || blockEntity.pendingRecovery != null) {
 
-		if (blockEntity.processingTicks >= PROCESSING_TIME) {
-			blockEntity.isProcessing = false;
-			return;
-		}
+                blockEntity.processingTicks = 0;
+                blockEntity.isProcessing = false;
+                blockEntity.pendingRecovery = null;
+                blockEntity.setChanged();
+            }
 
-		blockEntity.isProcessing = true;
-		blockEntity.processingTicks++;
+            return;
+        }
 
-		if (blockEntity.processingTicks >= PROCESSING_TIME) {
-			blockEntity.isProcessing = false;
-		}
+        if (blockEntity.pendingRecovery == null) {
+            if (blockEntity.processingTicks < PROCESSING_TIME) {
+                blockEntity.isProcessing = true;
+                blockEntity.processingTicks++;
+                blockEntity.setChanged();
 
-		blockEntity.setChanged();
-	}
+                if (blockEntity.processingTicks < PROCESSING_TIME) {
+                    return;
+                }
+            }
 
-	public int getProcessingTicks() {
-		return processingTicks;
-	}
+            blockEntity.isProcessing = false;
 
-	public boolean isProcessing() {
-		return isProcessing;
-	}
+            Optional<List<ItemStack>> result =
+                    RecyclerLogic.recoverIngredients(level, input);
+
+            if (result.isEmpty()) {
+                blockEntity.processingTicks = 0;
+                blockEntity.setChanged();
+                return;
+            }
+
+            blockEntity.pendingRecovery = new ArrayList<>();
+
+            for (ItemStack stack : result.get()) {
+                if (!stack.isEmpty()) {
+                    blockEntity.pendingRecovery.add(stack.copy());
+                }
+            }
+
+            blockEntity.setChanged();
+        }
+
+        if (!blockEntity.canFitAll(blockEntity.pendingRecovery)) {
+            return;
+        }
+
+        blockEntity.insertResults(blockEntity.pendingRecovery);
+
+        input.shrink(1);
+
+        if (input.isEmpty()) {
+            blockEntity.items.set(INPUT_SLOT, ItemStack.EMPTY);
+        }
+
+        blockEntity.pendingRecovery = null;
+        blockEntity.processingTicks = 0;
+        blockEntity.isProcessing = false;
+        blockEntity.setChanged();
+    }
+
+    private boolean canFitAll(List<ItemStack> results) {
+        List<ItemStack> simulated = new ArrayList<>(OUTPUT_SLOTS);
+
+        for (int i = OUTPUT_START; i < INVENTORY_SIZE; i++) {
+            simulated.add(items.get(i).copy());
+        }
+
+        for (ItemStack result : results) {
+            ItemStack remaining = result.copy();
+
+            for (ItemStack existing : simulated) {
+                if (remaining.isEmpty()) {
+                    break;
+                }
+
+                if (!existing.isEmpty()
+                        && ItemStack.isSameItemSameComponents(existing, remaining)) {
+
+                    int space = existing.getMaxStackSize() - existing.getCount();
+                    int moved = Math.min(space, remaining.getCount());
+
+                    if (moved > 0) {
+                        existing.grow(moved);
+                        remaining.shrink(moved);
+                    }
+                }
+            }
+
+            for (int i = 0; i < simulated.size() && !remaining.isEmpty(); i++) {
+                if (simulated.get(i).isEmpty()) {
+                    int moved = Math.min(
+                            remaining.getCount(),
+                            remaining.getMaxStackSize()
+                    );
+
+                    simulated.set(i, remaining.copyWithCount(moved));
+                    remaining.shrink(moved);
+                }
+            }
+
+            if (!remaining.isEmpty()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void insertResults(List<ItemStack> results) {
+        for (ItemStack result : results) {
+            ItemStack remaining = result.copy();
+
+            for (int slot = OUTPUT_START; slot < INVENTORY_SIZE; slot++) {
+                ItemStack existing = items.get(slot);
+
+                if (remaining.isEmpty()) {
+                    break;
+                }
+
+                if (!existing.isEmpty()
+                        && ItemStack.isSameItemSameComponents(existing, remaining)) {
+
+                    int space = existing.getMaxStackSize() - existing.getCount();
+                    int moved = Math.min(space, remaining.getCount());
+
+                    if (moved > 0) {
+                        existing.grow(moved);
+                        remaining.shrink(moved);
+                    }
+                }
+            }
+
+            for (int slot = OUTPUT_START;
+                    slot < INVENTORY_SIZE && !remaining.isEmpty();
+                    slot++) {
+
+                if (items.get(slot).isEmpty()) {
+                    int moved = Math.min(
+                            remaining.getCount(),
+                            remaining.getMaxStackSize()
+                    );
+
+                    items.set(slot, remaining.copyWithCount(moved));
+                    remaining.shrink(moved);
+                }
+            }
+        }
+    }
+
+    public int getProcessingTicks() {
+        return processingTicks;
+    }
+
+    public boolean isProcessing() {
+        return isProcessing;
+    }
 
     @Override
     public int[] getSlotsForFace(Direction side) {
@@ -182,33 +323,56 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
         return slot >= OUTPUT_START && slot < INVENTORY_SIZE;
     }
 
-	@Override
-	protected void loadAdditional(ValueInput input) {
-		super.loadAdditional(input);
+    @Override
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
 
-		for (int i = 0; i < items.size(); i++) {
-			items.set(i, ItemStack.EMPTY);
-		}
+        for (int i = 0; i < items.size(); i++) {
+            items.set(i, ItemStack.EMPTY);
+        }
 
-		ContainerHelper.loadAllItems(input, items);
+        ContainerHelper.loadAllItems(input, items);
 
-		processingTicks = input.getIntOr("ProcessingTicks", 0);
-		processingTicks = Math.max(0, Math.min(processingTicks, PROCESSING_TIME));
+        processingTicks = input.getIntOr("ProcessingTicks", 0);
+        processingTicks = Math.max(0, Math.min(processingTicks, PROCESSING_TIME));
 
-		isProcessing = false;
-	}
+        pendingRecovery = new ArrayList<>();
 
-	@Override
-	protected void saveAdditional(ValueOutput output) {
-		super.saveAdditional(output);
+        for (ItemStack stack : input.listOrEmpty("PendingRecovery", ItemStack.CODEC)) {
+            if (!stack.isEmpty()) {
+                pendingRecovery.add(stack.copy());
+            }
+        }
 
-		ContainerHelper.saveAllItems(output, items);
+        if (pendingRecovery.isEmpty()) {
+            pendingRecovery = null;
+        }
 
-		output.putInt("ProcessingTicks", processingTicks);
-	}
-	
-	@Override
-	public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-		super.preRemoveSideEffects(pos, state);
-	}
+        isProcessing = false;
+    }
+
+    @Override
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+
+        ContainerHelper.saveAllItems(output, items);
+
+        output.putInt("ProcessingTicks", processingTicks);
+
+        if (pendingRecovery != null && !pendingRecovery.isEmpty()) {
+            ValueOutput.TypedOutputList<ItemStack> pending =
+                    output.list("PendingRecovery", ItemStack.CODEC);
+
+            for (ItemStack stack : pendingRecovery) {
+                pending.add(stack);
+            }
+        } else {
+            output.discard("PendingRecovery");
+        }
+    }
+
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+    }
 }
