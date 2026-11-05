@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,7 @@ public final class RecoveryRule {
     private static Map<Identifier, List<OutputRule>> itemRules =
             Map.of();
 
-    private static Map<Identifier, List<OutputRule>> tagRules =
+    private static Map<Identifier, Map<Identifier, List<OutputRule>>> tagRules =
             Map.of();
 
     private RecoveryRule() {
@@ -88,13 +89,18 @@ public final class RecoveryRule {
             JsonObject root = rootElement.getAsJsonObject();
 
             Map<Identifier, List<OutputRule>> newItemRules =
-                    parseRules(root, "items", true);
+                    parseItemRules(root);
 
-            Map<Identifier, List<OutputRule>> newTagRules =
-                    parseRules(root, "tags", false);
+            Map<Identifier, Map<Identifier, List<OutputRule>>> newTagRules =
+                    parseTagRules(root);
 
-            itemRules = Map.copyOf(newItemRules);
-            tagRules = Map.copyOf(newTagRules);
+            itemRules = Collections.unmodifiableMap(
+                    new LinkedHashMap<>(newItemRules)
+            );
+
+            tagRules = Collections.unmodifiableMap(
+                    new LinkedHashMap<>(newTagRules)
+            );
 
             RecyclerMod.LOGGER.info("Recovery rules loaded successfully.");
 
@@ -110,102 +116,157 @@ public final class RecoveryRule {
         }
     }
 
-    private static Map<Identifier, List<OutputRule>> parseRules(
-            JsonObject root,
-            String sectionName,
-            boolean validateItemKeys
+    private static Map<Identifier, List<OutputRule>> parseItemRules(
+            JsonObject root
     ) {
         Map<Identifier, List<OutputRule>> result =
                 new LinkedHashMap<>();
 
-        if (!root.has(sectionName)) {
+        if (!root.has("items")) {
             return result;
         }
 
-        JsonElement sectionElement = root.get(sectionName);
+        JsonElement sectionElement = root.get("items");
 
         if (!sectionElement.isJsonObject()) {
             throw new IllegalArgumentException(
-                    "'" + sectionName + "' must be a JSON object."
+                    "'items' must be a JSON object."
             );
         }
 
         JsonObject section = sectionElement.getAsJsonObject();
 
         for (Map.Entry<String, JsonElement> entry : section.entrySet()) {
-            Identifier id = parseIdentifier(entry.getKey());
+            Identifier inputId = parseIdentifier(entry.getKey());
 
-            if (validateItemKeys
-                    && BuiltInRegistries.ITEM.getOptional(id).isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Unknown item in '" + sectionName + "': " + id
-                );
-            }
+            getRegisteredItem(inputId);
 
-            if (!entry.getValue().isJsonArray()) {
-                throw new IllegalArgumentException(
-                        "Rules for " + id + " must be a JSON array."
-                );
-            }
+            List<OutputRule> outputs =
+                    parseOutputRules(entry.getValue(), inputId.toString());
 
-            JsonArray outputs = entry.getValue().getAsJsonArray();
-            List<OutputRule> parsedOutputs = new ArrayList<>();
-
-            for (JsonElement outputElement : outputs) {
-                if (!outputElement.isJsonObject()) {
-                    throw new IllegalArgumentException(
-                            "An output rule for " + id + " must be an object."
-                    );
-                }
-
-                JsonObject output = outputElement.getAsJsonObject();
-
-                if (!output.has("item")) {
-                    throw new IllegalArgumentException(
-                            "An output rule for " + id + " is missing 'item'."
-                    );
-                }
-
-                Identifier outputId =
-                        parseIdentifier(output.get("item").getAsString());
-
-                Item outputItem = BuiltInRegistries.ITEM
-                        .getOptional(outputId)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Unknown output item: " + outputId
-                        ));
-
-                int count = output.has("count")
-                        ? output.get("count").getAsInt()
-                        : 1;
-
-                double chance = output.has("chance")
-                        ? output.get("chance").getAsDouble()
-                        : 100.0;
-
-                if (count <= 0) {
-                    throw new IllegalArgumentException(
-                            "Output count must be greater than zero."
-                    );
-                }
-
-                if (!Double.isFinite(chance)
-                        || chance < 0.0
-                        || chance > 100.0) {
-                    throw new IllegalArgumentException(
-                            "Chance must be between 0 and 100."
-                    );
-                }
-
-                parsedOutputs.add(
-                        new OutputRule(outputItem, count, chance)
-                );
-            }
-
-            result.put(id, List.copyOf(parsedOutputs));
+            result.put(inputId, outputs);
         }
 
         return result;
+    }
+
+    private static Map<Identifier, Map<Identifier, List<OutputRule>>> parseTagRules(
+            JsonObject root
+    ) {
+        Map<Identifier, Map<Identifier, List<OutputRule>>> result =
+                new LinkedHashMap<>();
+
+        if (!root.has("tags")) {
+            return result;
+        }
+
+        JsonElement sectionElement = root.get("tags");
+
+        if (!sectionElement.isJsonObject()) {
+            throw new IllegalArgumentException(
+                    "'tags' must be a JSON object."
+            );
+        }
+
+        JsonObject section = sectionElement.getAsJsonObject();
+
+        for (Map.Entry<String, JsonElement> tagEntry : section.entrySet()) {
+            Identifier tagId = parseIdentifier(tagEntry.getKey());
+
+            if (!tagEntry.getValue().isJsonObject()) {
+                throw new IllegalArgumentException(
+                        "Rules for tag " + tagId + " must be a JSON object."
+                );
+            }
+
+            JsonObject inputItems = tagEntry.getValue().getAsJsonObject();
+
+            Map<Identifier, List<OutputRule>> tagInputs =
+                    new LinkedHashMap<>();
+
+            for (Map.Entry<String, JsonElement> inputEntry
+                    : inputItems.entrySet()) {
+
+                Identifier inputId = parseIdentifier(inputEntry.getKey());
+
+                getRegisteredItem(inputId);
+
+                List<OutputRule> outputs =
+                        parseOutputRules(inputEntry.getValue(), inputId.toString());
+
+                tagInputs.put(inputId, outputs);
+            }
+
+            result.put(
+                    tagId,
+                    Collections.unmodifiableMap(tagInputs)
+            );
+        }
+
+        return result;
+    }
+
+    private static List<OutputRule> parseOutputRules(
+            JsonElement element,
+            String description
+    ) {
+        if (!element.isJsonArray()) {
+            throw new IllegalArgumentException(
+                    "Rules for " + description + " must be a JSON array."
+            );
+        }
+
+        JsonArray outputs = element.getAsJsonArray();
+        List<OutputRule> parsedOutputs = new ArrayList<>();
+
+        for (JsonElement outputElement : outputs) {
+            if (!outputElement.isJsonObject()) {
+                throw new IllegalArgumentException(
+                        "An output rule for " + description + " must be an object."
+                );
+            }
+
+            JsonObject output = outputElement.getAsJsonObject();
+
+            if (!output.has("item")) {
+                throw new IllegalArgumentException(
+                        "An output rule for " + description + " is missing 'item'."
+                );
+            }
+
+            Identifier outputId =
+                    parseIdentifier(output.get("item").getAsString());
+
+            Item outputItem = getRegisteredItem(outputId);
+
+            int count = output.has("count")
+                    ? output.get("count").getAsInt()
+                    : 1;
+
+            double chance = output.has("chance")
+                    ? output.get("chance").getAsDouble()
+                    : 100.0;
+
+            if (count <= 0) {
+                throw new IllegalArgumentException(
+                        "Output count must be greater than zero."
+                );
+            }
+
+            if (!Double.isFinite(chance)
+                    || chance < 0.0
+                    || chance > 100.0) {
+                throw new IllegalArgumentException(
+                        "Chance must be between 0 and 100."
+                );
+            }
+
+            parsedOutputs.add(
+                    new OutputRule(outputItem, count, chance)
+            );
+        }
+
+        return List.copyOf(parsedOutputs);
     }
 
     private static Identifier parseIdentifier(String value) {
@@ -218,6 +279,14 @@ public final class RecoveryRule {
         }
 
         return id;
+    }
+
+    private static Item getRegisteredItem(Identifier id) {
+        return BuiltInRegistries.ITEM
+                .getOptional(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Unknown item: " + id
+                ));
     }
 
     public static Optional<List<ItemStack>> getRecoveryResult(
@@ -236,7 +305,7 @@ public final class RecoveryRule {
             return Optional.of(rollOutputs(exactRules));
         }
 
-        for (Map.Entry<Identifier, List<OutputRule>> entry
+        for (Map.Entry<Identifier, Map<Identifier, List<OutputRule>>> entry
                 : tagRules.entrySet()) {
 
             TagKey<Item> tag = TagKey.create(
@@ -244,8 +313,15 @@ public final class RecoveryRule {
                     entry.getKey()
             );
 
-            if (input.is(tag)) {
-                return Optional.of(rollOutputs(entry.getValue()));
+            if (!input.is(tag)) {
+                continue;
+            }
+
+            List<OutputRule> outputs =
+                    entry.getValue().get(inputId);
+
+            if (outputs != null) {
+                return Optional.of(rollOutputs(outputs));
             }
         }
 
