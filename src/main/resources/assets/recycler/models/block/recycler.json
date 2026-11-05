@@ -2,7 +2,7 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "particle": "recycler:block/recycler",
+    "particle": "recycler:block/recycler_particle",
     "machine": "recycler:block/recycler"
   },
   "elements": [
