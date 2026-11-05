@@ -1,10 +1,9 @@
-
 package com.recycler;
 
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.NormalCraftingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
@@ -12,6 +11,8 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
@@ -32,7 +33,10 @@ public final class RecyclerLogic {
             Level level,
             ItemStack input
     ) {
-        if (level == null || level.isClientSide() || input.isEmpty()) {
+        if (level == null
+                || level.isClientSide()
+                || level.getServer() == null
+                || input.isEmpty()) {
             return Optional.empty();
         }
 
@@ -69,36 +73,61 @@ public final class RecyclerLogic {
                     (NormalCraftingRecipe) recipe;
 
             try {
-                ItemStack result =
-                        craftingRecipe.assemble(CraftingInput.EMPTY);
+                ItemStack result = getStaticResult(recipe);
 
                 if (result.isEmpty()
                         || result.getItem() != input.getItem()) {
                     continue;
                 }
 
-                List<ItemStack> ingredients = new ArrayList<>();
+                List<Ingredient> recipeIngredients =
+                        craftingRecipe.placementInfo().ingredients();
 
-                for (Ingredient ingredient :
-                        craftingRecipe.placementInfo().ingredients()) {
-
-                    Optional<Holder<Item>> representative =
-                            ingredient.items().findFirst();
-
-                    if (representative.isPresent()) {
-                        ingredients.add(
-                                new ItemStack(representative.get().value())
-                        );
-                    }
+                if (recipeIngredients.isEmpty()) {
+                    continue;
                 }
 
-                if (ingredients.isEmpty()) {
-                    return Optional.of(List.of());
+                List<ItemStack> ingredients =
+                        new ArrayList<>(recipeIngredients.size());
+
+                boolean validIngredients = true;
+
+                for (Ingredient ingredient : recipeIngredients) {
+
+                    Optional<Holder<Item>> representative =
+                            ingredient.items()
+                                    .sorted(
+                                            Comparator.comparing(holder ->
+                                                    BuiltInRegistries.ITEM
+                                                            .getKey(holder.value())
+                                                            .toString()
+                                            )
+                                    )
+                                    .filter(holder ->
+                                            ingredient.test(
+                                                    new ItemStack(holder.value())
+                                            )
+                                    )
+                                    .findFirst();
+
+                    if (representative.isEmpty()) {
+                        validIngredients = false;
+                        break;
+                    }
+
+                    ingredients.add(
+                            new ItemStack(representative.get().value())
+                    );
+                }
+
+                if (!validIngredients) {
+                    continue;
                 }
 
                 Collections.shuffle(ingredients, RANDOM);
 
                 int ingredientCount = ingredients.size();
+
                 List<ItemStack> recoveredItems = new ArrayList<>();
 
                 for (int i = 0; i < ingredientCount; i++) {
@@ -124,5 +153,37 @@ public final class RecyclerLogic {
         }
 
         return Optional.empty();
+    }
+
+    private static ItemStack getStaticResult(Recipe<?> recipe) {
+
+        if (recipe instanceof ShapelessRecipe shapelessRecipe) {
+            var template = shapelessRecipe.result();
+
+            if (template == null) {
+                return ItemStack.EMPTY;
+            }
+
+            return template.create();
+        }
+
+        if (recipe instanceof ShapedRecipe shapedRecipe) {
+            List<RecipeDisplay> displays = shapedRecipe.display();
+
+            if (displays.isEmpty()) {
+                return ItemStack.EMPTY;
+            }
+
+            SlotDisplay resultDisplay =
+                    displays.get(0).result();
+
+            if (resultDisplay
+                    instanceof SlotDisplay.ItemStackSlotDisplay stackDisplay) {
+
+                return stackDisplay.stack().create();
+            }
+        }
+
+        return ItemStack.EMPTY;
     }
 }
