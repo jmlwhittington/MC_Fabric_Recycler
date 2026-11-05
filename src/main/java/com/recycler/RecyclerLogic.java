@@ -1,3 +1,4 @@
+
 package com.recycler;
 
 import net.minecraft.core.Holder;
@@ -53,7 +54,8 @@ public final class RecyclerLogic {
 
         recipes.sort(
                 Comparator.comparing(
-                        holder -> holder.id().identifier().toString()
+                        recipeHolder ->
+                                recipeHolder.id().identifier().toString()
                 )
         );
 
@@ -97,15 +99,15 @@ public final class RecyclerLogic {
                     Optional<Holder<Item>> representative =
                             ingredient.items()
                                     .sorted(
-                                            Comparator.comparing(holder ->
+                                            Comparator.comparing(itemHolder ->
                                                     BuiltInRegistries.ITEM
-                                                            .getKey(holder.value())
+                                                            .getKey(itemHolder.value())
                                                             .toString()
                                             )
                                     )
-                                    .filter(holder ->
+                                    .filter(itemHolder ->
                                             ingredient.test(
-                                                    new ItemStack(holder.value())
+                                                    new ItemStack(itemHolder.value())
                                             )
                                     )
                                     .findFirst();
@@ -157,31 +159,22 @@ public final class RecyclerLogic {
 
     private static ItemStack getStaticResult(Recipe<?> recipe) {
 
-        if (recipe instanceof ShapelessRecipe shapelessRecipe) {
-            var template = shapelessRecipe.result();
-
-            if (template == null) {
-                return ItemStack.EMPTY;
-            }
-
-            return template.create();
+        if (!(recipe instanceof ShapedRecipe)
+                && !(recipe instanceof ShapelessRecipe)) {
+            return ItemStack.EMPTY;
         }
 
-        if (recipe instanceof ShapedRecipe shapedRecipe) {
-            List<RecipeDisplay> displays = shapedRecipe.display();
+        List<RecipeDisplay> displays = recipe.display();
 
-            if (displays.isEmpty()) {
-                return ItemStack.EMPTY;
-            }
+        if (displays.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
 
-            SlotDisplay resultDisplay =
-                    displays.get(0).result();
+        SlotDisplay resultDisplay = displays.get(0).result();
 
-            if (resultDisplay
-                    instanceof SlotDisplay.ItemStackSlotDisplay stackDisplay) {
-
-                return stackDisplay.stack().create();
-            }
+        if (resultDisplay
+                instanceof SlotDisplay.ItemStackSlotDisplay stackDisplay) {
+            return stackDisplay.stack().create();
         }
 
         return ItemStack.EMPTY;
