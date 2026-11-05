@@ -2,13 +2,13 @@ package com.recycler;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.core.registries.Registries;
 
 public final class ModBlocks {
     public static final Block RECYCLER = registerBlock(
@@ -28,7 +28,7 @@ public final class ModBlocks {
         );
         properties.setId(blockKey);
 
-        Block block = new Block(properties);
+        Block block = new RecyclerBlock(properties);
         Registry.register(BuiltInRegistries.BLOCK, blockKey, block);
 
         ResourceKey<Item> itemKey = ResourceKey.create(
