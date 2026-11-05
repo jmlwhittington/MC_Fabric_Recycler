@@ -1,3 +1,4 @@
+
 package com.recycler;
 
 import net.minecraft.core.Holder;
@@ -9,6 +10,8 @@ import net.minecraft.world.item.crafting.NormalCraftingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
@@ -53,50 +56,71 @@ public final class RecyclerLogic {
         for (RecipeHolder<?> holder : recipes) {
             Recipe<?> recipe = holder.value();
 
-            if (!(recipe instanceof NormalCraftingRecipe craftingRecipe)
-                    || recipe.getType() != RecipeType.CRAFTING) {
+            if (recipe.getClass() != ShapedRecipe.class
+                    && recipe.getClass() != ShapelessRecipe.class) {
                 continue;
             }
 
-            ItemStack result = craftingRecipe.assemble(CraftingInput.EMPTY);
-
-            if (result.isEmpty() || result.getItem() != input.getItem()) {
+            if (recipe.getType() != RecipeType.CRAFTING) {
                 continue;
             }
 
-            List<ItemStack> ingredients = new ArrayList<>();
+            NormalCraftingRecipe craftingRecipe =
+                    (NormalCraftingRecipe) recipe;
 
-            for (Ingredient ingredient : craftingRecipe.placementInfo().ingredients()) {
-                Optional<Holder<Item>> representative =
-                        ingredient.items().findFirst();
+            try {
+                ItemStack result =
+                        craftingRecipe.assemble(CraftingInput.EMPTY);
 
-                if (representative.isPresent()) {
-                    ingredients.add(
-                            new ItemStack(representative.get().value())
-                    );
+                if (result.isEmpty()
+                        || result.getItem() != input.getItem()) {
+                    continue;
                 }
-            }
 
-            if (ingredients.isEmpty()) {
-                return Optional.of(List.of());
-            }
+                List<ItemStack> ingredients = new ArrayList<>();
 
-            Collections.shuffle(ingredients, RANDOM);
+                for (Ingredient ingredient :
+                        craftingRecipe.placementInfo().ingredients()) {
 
-            int ingredientCount = ingredients.size();
-            List<ItemStack> recoveredItems = new ArrayList<>();
+                    Optional<Holder<Item>> representative =
+                            ingredient.items().findFirst();
 
-            for (int i = 0; i < ingredientCount; i++) {
-                int x = ingredientCount - i;
-                double chance =
-                        (100.0 * x) / (ingredientCount + 1);
-
-                if (RANDOM.nextDouble() * 100.0 < chance) {
-                    recoveredItems.add(ingredients.get(i).copy());
+                    if (representative.isPresent()) {
+                        ingredients.add(
+                                new ItemStack(representative.get().value())
+                        );
+                    }
                 }
-            }
 
-            return Optional.of(recoveredItems);
+                if (ingredients.isEmpty()) {
+                    return Optional.of(List.of());
+                }
+
+                Collections.shuffle(ingredients, RANDOM);
+
+                int ingredientCount = ingredients.size();
+                List<ItemStack> recoveredItems = new ArrayList<>();
+
+                for (int i = 0; i < ingredientCount; i++) {
+                    int x = ingredientCount - i;
+
+                    double chance =
+                            (100.0 * x) / (ingredientCount + 1);
+
+                    if (RANDOM.nextDouble() * 100.0 < chance) {
+                        recoveredItems.add(ingredients.get(i).copy());
+                    }
+                }
+
+                return Optional.of(recoveredItems);
+
+            } catch (RuntimeException exception) {
+                RecyclerMod.LOGGER.warn(
+                        "Recycler skipped invalid crafting recipe {}",
+                        holder.id(),
+                        exception
+                );
+            }
         }
 
         return Optional.empty();
