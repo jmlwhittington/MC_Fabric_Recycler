@@ -126,10 +126,19 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
         setChanged();
     }
 
-    @Override
-    public boolean canPlaceItem(int slot, ItemStack stack) {
-        return slot == INPUT_SLOT;
-    }
+
+	@Override
+	public boolean canPlaceItem(int slot, ItemStack stack) {
+		if (slot != INPUT_SLOT || stack.isEmpty() || level == null) {
+			return false;
+		}
+
+		if (level.isClientSide()) {
+			return true;
+		}
+
+		return RecyclerLogic.canRecycleInput(level, stack);
+	}
 
     @Override
     public boolean stillValid(Player player) {
@@ -340,14 +349,15 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
         return OUTPUT_SLOT_INDICES;
     }
 
-    @Override
-    public boolean canPlaceItemThroughFace(
-            int slot,
-            ItemStack stack,
-            Direction direction
-    ) {
-        return direction == Direction.UP && slot == INPUT_SLOT;
-    }
+
+	@Override
+	public boolean canPlaceItemThroughFace(
+			int slot,
+			ItemStack stack,
+			Direction direction
+	) {
+		return direction == Direction.UP && canPlaceItem(slot, stack);
+	}
 
     @Override
     public boolean canTakeItemThroughFace(

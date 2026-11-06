@@ -289,6 +289,36 @@ public final class RecoveryRule {
                 ));
     }
 
+
+	public static boolean hasApplicableRule(ItemStack input) {
+		if (input == null || input.isEmpty()) {
+			return false;
+		}
+
+		Identifier inputId =
+				BuiltInRegistries.ITEM.getKey(input.getItem());
+
+		if (itemRules.containsKey(inputId)) {
+			return true;
+		}
+
+		for (Map.Entry<Identifier, Map<Identifier, List<OutputRule>>> entry
+				: tagRules.entrySet()) {
+
+			TagKey<Item> tag = TagKey.create(
+					Registries.ITEM,
+					entry.getKey()
+			);
+
+			if (input.is(tag)
+					&& entry.getValue().containsKey(inputId)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
     public static Optional<List<ItemStack>> getRecoveryResult(
             ItemStack input
     ) {

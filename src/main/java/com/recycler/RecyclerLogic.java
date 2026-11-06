@@ -30,6 +30,102 @@ public final class RecyclerLogic {
     private RecyclerLogic() {
     }
 
+    public static boolean canRecycleInput(Level level, ItemStack input) {
+        if (level == null
+                || level.isClientSide()
+                || level.getServer() == null
+                || input == null
+                || input.isEmpty()) {
+            return false;
+        }
+
+        if (RecoveryRule.hasApplicableRule(input)) {
+            return true;
+        }
+
+        List<RecipeHolder<?>> recipes = new ArrayList<>(
+                level.getServer().getRecipeManager().getRecipes()
+        );
+
+        recipes.sort(
+                Comparator.comparing(
+                        recipeHolder ->
+                                recipeHolder.id().identifier().toString()
+                )
+        );
+
+        for (RecipeHolder<?> holder : recipes) {
+            Recipe<?> recipe = holder.value();
+
+            if (recipe.getClass() != ShapedRecipe.class
+                    && recipe.getClass() != ShapelessRecipe.class) {
+                continue;
+            }
+
+            if (recipe.getType() != RecipeType.CRAFTING) {
+                continue;
+            }
+
+            try {
+                ItemStack result = getStaticResult(recipe);
+
+                if (result.isEmpty()
+                        || result.getItem() != input.getItem()
+                        || result.getCount() != 1) {
+                    continue;
+                }
+
+                NormalCraftingRecipe craftingRecipe =
+                        (NormalCraftingRecipe) recipe;
+
+                List<Ingredient> ingredients =
+                        craftingRecipe.placementInfo().ingredients();
+
+                if (ingredients.isEmpty()) {
+                    continue;
+                }
+
+                boolean validIngredients = true;
+
+                for (Ingredient ingredient : ingredients) {
+                    Optional<Holder<Item>> representative =
+                            ingredient.items()
+                                    .sorted(
+                                            Comparator.comparing(itemHolder ->
+                                                    BuiltInRegistries.ITEM
+                                                            .getKey(itemHolder.value())
+                                                            .toString()
+                                            )
+                                    )
+                                    .filter(itemHolder ->
+                                            ingredient.test(
+                                                    new ItemStack(itemHolder.value())
+                                            )
+                                    )
+                                    .findFirst();
+
+                    if (representative.isEmpty()) {
+                        validIngredients = false;
+                        break;
+                    }
+                }
+
+                if (validIngredients) {
+                    return true;
+                }
+
+            } catch (RuntimeException exception) {
+                RecyclerMod.LOGGER.warn(
+                        "Recycler skipped invalid crafting recipe {} during eligibility check",
+                        holder.id(),
+                        exception
+                );
+            }
+        }
+
+        return false;
+    }
+
     public static Optional<List<ItemStack>> recoverIngredients(
             Level level,
             ItemStack input
@@ -126,7 +222,6 @@ public final class RecyclerLogic {
                 boolean validIngredients = true;
 
                 for (Ingredient ingredient : recipeIngredients) {
-
                     Optional<Holder<Item>> representative =
                             ingredient.items()
                                     .sorted(
