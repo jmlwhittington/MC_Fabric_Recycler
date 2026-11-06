@@ -269,15 +269,14 @@ public final class RecyclerLogic {
                     }
                 }
 
-                if (recoveredItems.isEmpty()) {
-                    RecyclerMod.LOGGER.info(
-                            "Recycler recovered no ingredients from recipe {}. "
-                                    + "Input will be retained.",
-                            holder.id()
-                    );
+				if (recoveredItems.isEmpty()) {
+					RecyclerMod.LOGGER.info(
+							"Recycler recovered no ingredients from recipe {}.",
+							holder.id()
+					);
 
-                    return Optional.empty();
-                }
+					return Optional.of(recoveredItems);
+				}
 
                 return Optional.of(recoveredItems);
 
