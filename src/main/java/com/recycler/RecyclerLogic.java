@@ -45,6 +45,21 @@ public final class RecyclerLogic {
                 RecoveryRule.getRecoveryResult(input);
 
         if (specialResult.isPresent()) {
+            if (specialResult.get().isEmpty()) {
+                RecyclerMod.LOGGER.info(
+                        "Recycler matched a special recovery rule for {}, "
+                                + "but it produced no items. Input will be retained.",
+                        BuiltInRegistries.ITEM.getKey(input.getItem())
+                );
+
+                return Optional.empty();
+            }
+
+            RecyclerMod.LOGGER.info(
+                    "Recycler matched a special recovery rule for {}.",
+                    BuiltInRegistries.ITEM.getKey(input.getItem())
+            );
+
             return specialResult;
         }
 
@@ -79,6 +94,22 @@ public final class RecyclerLogic {
 
                 if (result.isEmpty()
                         || result.getItem() != input.getItem()) {
+                    continue;
+                }
+
+                RecyclerMod.LOGGER.info(
+                        "Recycler found recipe {} for {} with output count {}.",
+                        holder.id(),
+                        BuiltInRegistries.ITEM.getKey(input.getItem()),
+                        result.getCount()
+                );
+
+                if (result.getCount() != 1) {
+                    RecyclerMod.LOGGER.info(
+                            "Recycler skipped recipe {} because its output count is not 1.",
+                            holder.id()
+                    );
+
                     continue;
                 }
 
@@ -143,6 +174,16 @@ public final class RecyclerLogic {
                     }
                 }
 
+                if (recoveredItems.isEmpty()) {
+                    RecyclerMod.LOGGER.info(
+                            "Recycler recovered no ingredients from recipe {}. "
+                                    + "Input will be retained.",
+                            holder.id()
+                    );
+
+                    return Optional.empty();
+                }
+
                 return Optional.of(recoveredItems);
 
             } catch (RuntimeException exception) {
@@ -153,6 +194,11 @@ public final class RecyclerLogic {
                 );
             }
         }
+
+        RecyclerMod.LOGGER.info(
+                "Recycler found no eligible single-output crafting recipe for {}.",
+                BuiltInRegistries.ITEM.getKey(input.getItem())
+        );
 
         return Optional.empty();
     }

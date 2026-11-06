@@ -31,7 +31,7 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
 
     private int processingTicks = 0;
     private boolean isProcessing = false;
-	private boolean inputRejected = false;
+    private boolean inputRejected = false;
 
     private List<ItemStack> pendingRecovery = null;
 
@@ -70,33 +70,33 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
     public ItemStack removeItem(int slot, int amount) {
         ItemStack result = ContainerHelper.removeItem(items, slot, amount);
 
-		if (!result.isEmpty()) {
-			if (slot == INPUT_SLOT) {
-				processingTicks = 0;
-				isProcessing = false;
-				inputRejected = false;
-				pendingRecovery = null;
-			}
+        if (!result.isEmpty()) {
+            if (slot == INPUT_SLOT) {
+                processingTicks = 0;
+                isProcessing = false;
+                inputRejected = false;
+                pendingRecovery = null;
+            }
 
-			setChanged();
-		}
+            setChanged();
+        }
 
         return result;
     }
 
-	@Override
-	public ItemStack removeItemNoUpdate(int slot) {
-		ItemStack result = ContainerHelper.takeItem(items, slot);
+    @Override
+    public ItemStack removeItemNoUpdate(int slot) {
+        ItemStack result = ContainerHelper.takeItem(items, slot);
 
-		if (!result.isEmpty() && slot == INPUT_SLOT) {
-			processingTicks = 0;
-			isProcessing = false;
-			inputRejected = false;
-			pendingRecovery = null;
-		}
+        if (!result.isEmpty() && slot == INPUT_SLOT) {
+            processingTicks = 0;
+            isProcessing = false;
+            inputRejected = false;
+            pendingRecovery = null;
+        }
 
-		return result;
-	}
+        return result;
+    }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
@@ -109,7 +109,7 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
         if (slot == INPUT_SLOT) {
             processingTicks = 0;
             isProcessing = false;
-			inputRejected = false;
+            inputRejected = false;
             pendingRecovery = null;
         }
 
@@ -121,7 +121,7 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
         items.clear();
         processingTicks = 0;
         isProcessing = false;
-		inputRejected = false;
+        inputRejected = false;
         pendingRecovery = null;
         setChanged();
     }
@@ -158,21 +158,21 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
             if (blockEntity.processingTicks != 0
                     || blockEntity.isProcessing
                     || blockEntity.pendingRecovery != null
-					|| blockEntity.inputRejected) {
+                    || blockEntity.inputRejected) {
 
                 blockEntity.processingTicks = 0;
                 blockEntity.isProcessing = false;
-				blockEntity.inputRejected = false;
+                blockEntity.inputRejected = false;
                 blockEntity.pendingRecovery = null;
                 blockEntity.setChanged();
             }
 
             return;
         }
-		
-		if (blockEntity.inputRejected) {
-			return;
-		}
+
+        if (blockEntity.inputRejected) {
+            return;
+        }
 
         if (blockEntity.pendingRecovery == null) {
             if (blockEntity.processingTicks < PROCESSING_TIME) {
@@ -190,13 +190,13 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
             Optional<List<ItemStack>> result =
                     RecyclerLogic.recoverIngredients(level, input);
 
-			if (result.isEmpty()) {
-				blockEntity.processingTicks = 0;
-				blockEntity.isProcessing = false;
-				blockEntity.inputRejected = true;
-				blockEntity.setChanged();
-				return;
-			}
+            if (result.isEmpty() || result.get().isEmpty()) {
+                blockEntity.processingTicks = 0;
+                blockEntity.isProcessing = false;
+                blockEntity.inputRejected = true;
+                blockEntity.setChanged();
+                return;
+            }
 
             blockEntity.pendingRecovery = new ArrayList<>();
 
@@ -204,6 +204,13 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
                 if (!stack.isEmpty()) {
                     blockEntity.pendingRecovery.add(stack.copy());
                 }
+            }
+
+            if (blockEntity.pendingRecovery.isEmpty()) {
+                blockEntity.processingTicks = 0;
+                blockEntity.inputRejected = true;
+                blockEntity.setChanged();
+                return;
             }
 
             blockEntity.setChanged();
@@ -399,12 +406,12 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
         }
     }
 
-	@Override
-	public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-		super.preRemoveSideEffects(pos, state);
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
 
-		if (level != null && !level.isClientSide()) {
-			Containers.dropContents(level, pos, this);
-		}
-	}
+        if (level != null && !level.isClientSide()) {
+            Containers.dropContents(level, pos, this);
+        }
+    }
 }
