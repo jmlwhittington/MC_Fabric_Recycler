@@ -15,6 +15,12 @@ import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.level.Level;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DyeItem;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,6 +35,75 @@ public final class RecyclerLogic {
 
     private RecyclerLogic() {
     }
+	
+	private static boolean isProtectedInput(ItemStack input) {
+		if (input.getItem() instanceof DyeItem) {
+			return true;
+		}
+
+		if (!(input.getItem() instanceof BlockItem blockItem)
+				|| !(blockItem.getBlock() instanceof ShulkerBoxBlock)) {
+			return false;
+		}
+
+		if (input.has(DataComponents.CONTAINER_LOOT)) {
+			return true;
+		}
+
+		ItemContainerContents contents = input.get(DataComponents.CONTAINER);
+
+		return contents != null
+				&& contents.nonEmptyItemCopyStream().findAny().isPresent();
+	}
+	
+	private static Optional<Item> getSupportedMultiOutputPlank(
+        Item inputItem,
+        int outputCount,
+        List<Ingredient> ingredients
+	) {
+		Identifier inputId = BuiltInRegistries.ITEM.getKey(inputItem);
+		String path = inputId.getPath();
+
+		int expectedOutputCount;
+
+		if (path.endsWith("_door")) {
+			expectedOutputCount = 3;
+		} else if (path.endsWith("_trapdoor")) {
+			expectedOutputCount = 2;
+		} else {
+			return Optional.empty();
+		}
+
+		if (outputCount != expectedOutputCount
+				|| ingredients.isEmpty()
+				|| ingredients.size() % outputCount != 0) {
+			return Optional.empty();
+		}
+
+		String woodName = path.substring(0, path.lastIndexOf('_'));
+
+		Identifier plankId = Identifier.fromNamespaceAndPath(
+				inputId.getNamespace(),
+				woodName + "_planks"
+		);
+
+		Optional<Item> plank = BuiltInRegistries.ITEM.getOptional(plankId);
+
+		if (plank.isEmpty()) {
+			return Optional.empty();
+		}
+
+		ItemStack representative = new ItemStack(plank.get());
+
+		// Every occupied recipe slot must accept this exact plank item.
+		for (Ingredient ingredient : ingredients) {
+			if (!ingredient.test(representative)) {
+				return Optional.empty();
+			}
+		}
+
+		return plank;
+	}
 
     public static boolean canRecycleInput(Level level, ItemStack input) {
         if (level == null
@@ -38,6 +113,10 @@ public final class RecyclerLogic {
                 || input.isEmpty()) {
             return false;
         }
+		
+		if (isProtectedInput(input)) {
+			return false;
+		}
 
         if (RecoveryRule.hasApplicableRule(input)) {
             return true;
@@ -71,7 +150,6 @@ public final class RecyclerLogic {
 
                 if (result.isEmpty()
                         || result.getItem() != input.getItem()
-                        || result.getCount() != 1) {
                     continue;
                 }
 
@@ -80,6 +158,19 @@ public final class RecyclerLogic {
 
                 List<Ingredient> ingredients =
                         craftingRecipe.placementInfo().ingredients();
+				
+				if (result.getCount() != 1
+						&& getSupportedMultiOutputPlank(
+								input.getItem(),
+								result.getCount(),
+								ingredients
+						).isEmpty()) {
+					continue;
+				}
+				
+				if (ingredients.size() <= 1) {
+					continue;
+				}
 
                 if (ingredients.isEmpty()) {
                     continue;
@@ -136,6 +227,10 @@ public final class RecyclerLogic {
                 || input.isEmpty()) {
             return Optional.empty();
         }
+		
+		if (isProtectedInput(input)) {
+			return Optional.empty();
+		}
 
         Optional<List<ItemStack>> specialResult =
                 RecoveryRule.getRecoveryResult(input);
@@ -209,6 +304,10 @@ public final class RecyclerLogic {
 
                 List<Ingredient> recipeIngredients =
                         craftingRecipe.placementInfo().ingredients();
+				
+				if (recipeIngredients.size() <= 1) {
+					continue;
+				}
 
                 if (recipeIngredients.isEmpty()) {
                     continue;
