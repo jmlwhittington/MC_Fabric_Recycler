@@ -199,13 +199,13 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
             Optional<List<ItemStack>> result =
                     RecyclerLogic.recoverIngredients(level, input);
 
-            if (result.isEmpty() || result.get().isEmpty()) {
-                blockEntity.processingTicks = 0;
-                blockEntity.isProcessing = false;
-                blockEntity.inputRejected = true;
-                blockEntity.setChanged();
-                return;
-            }
+			if (result.isEmpty()) {
+				blockEntity.processingTicks = 0;
+				blockEntity.isProcessing = false;
+				blockEntity.inputRejected = true;
+				blockEntity.setChanged();
+				return;
+			}
 
             blockEntity.pendingRecovery = new ArrayList<>();
 
@@ -215,12 +215,10 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
                 }
             }
 
-            if (blockEntity.pendingRecovery.isEmpty()) {
-                blockEntity.processingTicks = 0;
-                blockEntity.inputRejected = true;
-                blockEntity.setChanged();
-                return;
-            }
+			if (blockEntity.pendingRecovery.isEmpty()) {
+				blockEntity.consumeInput(input);
+				return;
+			}
 
             blockEntity.setChanged();
         }
@@ -229,19 +227,24 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
             return;
         }
 
-        blockEntity.insertResults(blockEntity.pendingRecovery);
-
-        input.shrink(1);
-
-        if (input.isEmpty()) {
-            blockEntity.items.set(INPUT_SLOT, ItemStack.EMPTY);
-        }
-
-        blockEntity.pendingRecovery = null;
-        blockEntity.processingTicks = 0;
-        blockEntity.isProcessing = false;
-        blockEntity.setChanged();
+		blockEntity.insertResults(blockEntity.pendingRecovery);
+		blockEntity.consumeInput(input);
     }
+
+	private void consumeInput(ItemStack input) {
+		input.shrink(1);
+
+		if (input.isEmpty()) {
+			items.set(INPUT_SLOT, ItemStack.EMPTY);
+		}
+
+		pendingRecovery = null;
+		processingTicks = 0;
+		isProcessing = false;
+		inputRejected = false;
+
+		setChanged();
+	}
 
     private boolean canFitAll(List<ItemStack> results) {
         List<ItemStack> simulated = new ArrayList<>(OUTPUT_SLOTS);

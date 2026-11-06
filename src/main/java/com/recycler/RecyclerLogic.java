@@ -140,24 +140,22 @@ public final class RecyclerLogic {
         Optional<List<ItemStack>> specialResult =
                 RecoveryRule.getRecoveryResult(input);
 
-        if (specialResult.isPresent()) {
-            if (specialResult.get().isEmpty()) {
-                RecyclerMod.LOGGER.info(
-                        "Recycler matched a special recovery rule for {}, "
-                                + "but it produced no items. Input will be retained.",
-                        BuiltInRegistries.ITEM.getKey(input.getItem())
-                );
+		if (specialResult.isPresent()) {
+			if (specialResult.get().isEmpty()) {
+				RecyclerMod.LOGGER.info(
+						"Recycler matched a special recovery rule for {}, "
+								+ "but recovered no items.",
+						BuiltInRegistries.ITEM.getKey(input.getItem())
+				);
+			} else {
+				RecyclerMod.LOGGER.info(
+						"Recycler matched a special recovery rule for {}.",
+						BuiltInRegistries.ITEM.getKey(input.getItem())
+				);
+			}
 
-                return Optional.empty();
-            }
-
-            RecyclerMod.LOGGER.info(
-                    "Recycler matched a special recovery rule for {}.",
-                    BuiltInRegistries.ITEM.getKey(input.getItem())
-            );
-
-            return specialResult;
-        }
+			return specialResult;
+		}
 
         List<RecipeHolder<?>> recipes = new ArrayList<>(
                 level.getServer().getRecipeManager().getRecipes()
