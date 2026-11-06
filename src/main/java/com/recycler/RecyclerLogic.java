@@ -172,10 +172,6 @@ public final class RecyclerLogic {
 					continue;
 				}
 
-                if (ingredients.isEmpty()) {
-                    continue;
-                }
-
                 boolean validIngredients = true;
 
                 for (Ingredient ingredient : ingredients) {
@@ -224,6 +220,7 @@ public final class RecyclerLogic {
         if (level == null
                 || level.isClientSide()
                 || level.getServer() == null
+				|| input == null
                 || input.isEmpty()) {
             return Optional.empty();
         }
@@ -313,10 +310,6 @@ public final class RecyclerLogic {
 
 					continue;
 				}
-
-                if (recipeIngredients.isEmpty()) {
-                    continue;
-                }
 
 				List<ItemStack> ingredients;
 
