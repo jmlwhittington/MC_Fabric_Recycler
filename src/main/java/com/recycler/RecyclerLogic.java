@@ -75,7 +75,7 @@ public final class RecyclerLogic {
 		}
 
 		if (outputCount != expectedOutputCount
-				|| ingredients.isEmpty()
+				|| ingredients.size() != 6
 				|| ingredients.size() % outputCount != 0) {
 			return Optional.empty();
 		}
@@ -148,10 +148,10 @@ public final class RecyclerLogic {
             try {
                 ItemStack result = getStaticResult(recipe);
 
-                if (result.isEmpty()
-                        || result.getItem() != input.getItem()
-                    continue;
-                }
+				if (result.isEmpty()
+						|| result.getItem() != input.getItem()) {
+					continue;
+				}
 
                 NormalCraftingRecipe craftingRecipe =
                         (NormalCraftingRecipe) recipe;
@@ -293,15 +293,6 @@ public final class RecyclerLogic {
                         result.getCount()
                 );
 
-                if (result.getCount() != 1) {
-                    RecyclerMod.LOGGER.info(
-                            "Recycler skipped recipe {} because its output count is not 1.",
-                            holder.id()
-                    );
-
-                    continue;
-                }
-
                 List<Ingredient> recipeIngredients =
                         craftingRecipe.placementInfo().ingredients();
 				
@@ -309,45 +300,85 @@ public final class RecyclerLogic {
 					continue;
 				}
 
+				if (result.getCount() != 1
+						&& getSupportedMultiOutputPlank(
+								input.getItem(),
+								result.getCount(),
+								recipeIngredients
+						).isEmpty()) {
+					RecyclerMod.LOGGER.info(
+							"Recycler skipped unsupported multi-output recipe {}.",
+							holder.id()
+					);
+
+					continue;
+				}
+
                 if (recipeIngredients.isEmpty()) {
                     continue;
                 }
 
-                List<ItemStack> ingredients =
-                        new ArrayList<>(recipeIngredients.size());
+				List<ItemStack> ingredients;
 
-                boolean validIngredients = true;
+				if (result.getCount() == 1) {
 
-                for (Ingredient ingredient : recipeIngredients) {
-                    Optional<Holder<Item>> representative =
-                            ingredient.items()
-                                    .sorted(
-                                            Comparator.comparing(itemHolder ->
-                                                    BuiltInRegistries.ITEM
-                                                            .getKey(itemHolder.value())
-                                                            .toString()
-                                            )
-                                    )
-                                    .filter(itemHolder ->
-                                            ingredient.test(
-                                                    new ItemStack(itemHolder.value())
-                                            )
-                                    )
-                                    .findFirst();
+					// Keep the existing deterministic representative-ingredient behavior.
+					ingredients = new ArrayList<>(recipeIngredients.size());
 
-                    if (representative.isEmpty()) {
-                        validIngredients = false;
-                        break;
-                    }
+					boolean validIngredients = true;
 
-                    ingredients.add(
-                            new ItemStack(representative.get().value())
-                    );
-                }
+					for (Ingredient ingredient : recipeIngredients) {
+						Optional<Holder<Item>> representative =
+								ingredient.items()
+										.sorted(
+												Comparator.comparing(itemHolder ->
+														BuiltInRegistries.ITEM
+																.getKey(itemHolder.value())
+																.toString()
+												)
+										)
+										.filter(itemHolder ->
+												ingredient.test(
+														new ItemStack(itemHolder.value())
+												)
+										)
+										.findFirst();
 
-                if (!validIngredients) {
-                    continue;
-                }
+						if (representative.isEmpty()) {
+							validIngredients = false;
+							break;
+						}
+
+						ingredients.add(
+								new ItemStack(representative.get().value())
+						);
+					}
+
+					if (!validIngredients) {
+						continue;
+					}
+
+				} else {
+
+					Optional<Item> plank = getSupportedMultiOutputPlank(
+							input.getItem(),
+							result.getCount(),
+							recipeIngredients
+					);
+
+					if (plank.isEmpty()) {
+						continue;
+					}
+
+					int ingredientCost =
+							recipeIngredients.size() / result.getCount();
+
+					ingredients = new ArrayList<>(ingredientCost);
+
+					for (int i = 0; i < ingredientCost; i++) {
+						ingredients.add(new ItemStack(plank.get()));
+					}
+				}
 
                 Collections.shuffle(ingredients, RANDOM);
 
