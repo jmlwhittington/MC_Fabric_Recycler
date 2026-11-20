@@ -15,12 +15,17 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.Containers;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class RecyclerBlockEntity extends BlockEntity implements Container, WorldlyContainer {
+public class RecyclerBlockEntity extends BlockEntity
+        implements Container, WorldlyContainer, MenuProvider {
 
     public static final int INPUT_SLOT = 0;
     public static final int OUTPUT_START = 1;
@@ -427,4 +432,18 @@ public class RecyclerBlockEntity extends BlockEntity implements Container, World
             Containers.dropContents(level, pos, this);
         }
     }
+	
+	@Override
+	public Component getDisplayName() {
+		return Component.translatable("block.recycler.recycler");
+	}
+
+	@Override
+	public AbstractContainerMenu createMenu(
+			int containerId,
+			Inventory playerInventory,
+			Player player
+	) {
+		return new RecyclerMenu(containerId, playerInventory, this);
+	}
 }

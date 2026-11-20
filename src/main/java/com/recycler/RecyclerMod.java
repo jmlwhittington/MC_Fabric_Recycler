@@ -16,6 +16,7 @@ public class RecyclerMod implements ModInitializer {
     @Override
     public void onInitialize() {
         ModBlocks.initialize();
+		ModMenuTypes.initialize();
 
         RecoveryRule.initialize();
 
