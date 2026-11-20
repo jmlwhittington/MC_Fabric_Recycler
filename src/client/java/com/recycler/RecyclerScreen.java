@@ -51,8 +51,8 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         );
 
         graphics.fill(
-                x + 60, y + 39,
-                x + 100, y + 47,
+                x + 59, y + 39,
+                x + 99, y + 47,
                 0xFF555555
         );
 
@@ -60,26 +60,26 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 
         if (progressWidth > 0) {
             graphics.fill(
-                    x + 61, y + 40,
-                    x + 61 + progressWidth, y + 46,
+                    x + 60, y + 40,
+                    x + 60 + progressWidth, y + 46,
                     0xFF55AA55
             );
         }
 
         graphics.outline(
-                x + 60, y + 39,
+                x + 59, y + 39,
                 40, 8,
                 0xFF404040
         );
 
-        drawSlot(graphics, x + 24, y + 34);
+        drawSlot(graphics, x + 24, y + 36);
 
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 3; col++) {
                 drawSlot(
                         graphics,
-                        x + 115 + col * 18,
-                        y + 29 + row * 18
+                        x + 113 + col * 18,
+                        y + 30 + row * 18
                 );
             }
         }
@@ -142,40 +142,40 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
                 textColor
         );
 
-        graphics.text(
-                this.font,
-                "Input",
-                20,
-                20,
-                textColor
-        );
+		graphics.text(
+				this.font,
+				"Input",
+				20,
+				22,
+				textColor
+		);
 
-        graphics.text(
-                this.font,
-                "Progress",
-                56,
-                26,
-                textColor
-        );
+		graphics.text(
+				this.font,
+				"Progress",
+				55,
+				28,
+				textColor
+		);
 
-        String outputLabel = "Output";
+		String outputLabel = "Output";
 
-        graphics.text(
-                this.font,
-                outputLabel,
-                114 + (54 - this.font.width(outputLabel)) / 2,
-                15,
-                textColor
-        );
+		graphics.text(
+				this.font,
+				outputLabel,
+				110 + (54 - this.font.width(outputLabel)) / 2,
+				16,
+				textColor
+		);
 
-        String status = this.menu.getStatusText();
+		String status = this.menu.getStatusText();
 
-        graphics.text(
-                this.font,
-                status,
-                60 + (40 - this.font.width(status)) / 2,
-                51,
-                textColor
-        );
+		graphics.text(
+				this.font,
+				status,
+				59 + (40 - this.font.width(status)) / 2,
+				51,
+				textColor
+		);
     }
 }
