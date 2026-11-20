@@ -148,6 +148,18 @@ public final class RecyclerLogic {
 					createIngredients(Items.HAY_BLOCK, 1)
 			);
 		}
+		
+		if (path.equals("copper_bulb")
+				|| path.endsWith("_copper_bulb")) {
+
+			List<ItemStack> ingredients = new ArrayList<>();
+
+			ingredients.addAll(createIngredients(Items.COPPER_BLOCK, 3));
+			ingredients.add(new ItemStack(Items.BLAZE_ROD));
+			ingredients.add(new ItemStack(Items.REDSTONE));
+
+			return Optional.of(ingredients);
+		}
 
 		if (item == Items.LEAD) {
 			return Optional.of(
@@ -263,13 +275,12 @@ public final class RecyclerLogic {
 					.orElse(item);
 		}
 
-		if (path.startsWith("waxed_")
-				&& (path.endsWith("_copper_bulb")
-				|| path.endsWith("_copper_chest"))) {
+		if (path.equals("copper_chest")
+				|| path.endsWith("_copper_chest")) {
 
 			Identifier normalId = Identifier.fromNamespaceAndPath(
 					inputId.getNamespace(),
-					path.substring("waxed_".length())
+					"copper_chest"
 			);
 
 			return BuiltInRegistries.ITEM.getOptional(normalId)
