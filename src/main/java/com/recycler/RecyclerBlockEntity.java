@@ -134,15 +134,7 @@ public class RecyclerBlockEntity extends BlockEntity
 
 	@Override
 	public boolean canPlaceItem(int slot, ItemStack stack) {
-		if (slot != INPUT_SLOT || stack.isEmpty() || level == null) {
-			return false;
-		}
-
-		if (level.isClientSide()) {
-			return true;
-		}
-
-		return RecyclerLogic.canRecycleInput(level, stack);
+		return slot == INPUT_SLOT && !stack.isEmpty() && level != null;
 	}
 
     @Override
@@ -343,6 +335,10 @@ public class RecyclerBlockEntity extends BlockEntity
     public int getProcessingTicks() {
         return processingTicks;
     }
+	
+	public boolean isInputRejected() {
+		return inputRejected;
+	}
 
     @Override
     public int[] getSlotsForFace(Direction side) {
