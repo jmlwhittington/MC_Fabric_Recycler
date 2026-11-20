@@ -32,7 +32,7 @@ public class RecyclerBlock extends HorizontalDirectionalBlock implements EntityB
 			Player player,
 			BlockHitResult hit
 	) {
-		if (!level.isClientSide) {
+		if (!level.isClientSide()) {
 			BlockEntity blockEntity = level.getBlockEntity(pos);
 
 			if (blockEntity instanceof RecyclerBlockEntity recycler) {
