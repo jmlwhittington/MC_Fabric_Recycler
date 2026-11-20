@@ -39,7 +39,7 @@ public final class RecyclerLogic {
 	
 	private static boolean isProtectedInput(ItemStack input) {
 		if (input.is(Items.STICK)
-				|| input.is(Items.LEATHER) {
+				|| input.is(Items.LEATHER)) {
 			return true;
 		}
 
