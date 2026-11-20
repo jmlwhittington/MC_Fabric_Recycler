@@ -20,6 +20,8 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.BundleContents;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,23 +38,263 @@ public final class RecyclerLogic {
     }
 	
 	private static boolean isProtectedInput(ItemStack input) {
-		if (input.has(DataComponents.FOOD)) {
+		if (input.is(Items.STICK)
+				|| input.is(Items.LEATHER) {
+			return true;
+		}
+
+		if (input.has(DataComponents.FOOD)
+				|| input.is(Items.CAKE)
+				|| input.is(Items.FERMENTED_SPIDER_EYE)
+				|| input.is(Items.GLISTERING_MELON_SLICE)) {
 			return true;
 		}
 		
-		if (!(input.getItem() instanceof BlockItem blockItem)
-				|| !(blockItem.getBlock() instanceof ShulkerBoxBlock)) {
-			return false;
-		}
+		Identifier inputId = BuiltInRegistries.ITEM.getKey(input.getItem());
+		String path = inputId.getPath();
 
-		if (input.has(DataComponents.CONTAINER_LOOT)) {
+		if (path.equals("target")
+				|| path.equals("carpet")
+				|| path.endsWith("_carpet"))
+				|| path.endsWith("_ingot")) {
 			return true;
 		}
+		
+		if (input.getItem() instanceof BlockItem blockItem
+				&& blockItem.getBlock() instanceof ShulkerBoxBlock) {
 
-		ItemContainerContents contents = input.get(DataComponents.CONTAINER);
+			if (input.has(DataComponents.CONTAINER_LOOT)) {
+				return true;
+			}
 
-		return contents != null
-				&& contents.nonEmptyItemCopyStream().findAny().isPresent();
+			ItemContainerContents contents =
+					input.get(DataComponents.CONTAINER);
+
+			if (contents != null
+					&& contents.nonEmptyItemCopyStream().findAny().isPresent()) {
+				return true;
+			}
+		}
+		
+	    if (input.getItem() == Items.BUNDLE
+				|| path.endsWith("_bundle")) {
+
+			BundleContents contents =
+					input.get(DataComponents.BUNDLE_CONTENTS);
+
+			return contents != null
+					&& contents.itemCopies().findAny().isPresent();
+		}
+
+		return false;
+	}
+	
+	private static boolean isDyedShulkerBox(ItemStack input) {
+		return input.getItem() != Items.SHULKER_BOX
+				&& input.getItem() instanceof BlockItem blockItem
+				&& blockItem.getBlock() instanceof ShulkerBoxBlock;
+	}
+	
+	private static Optional<List<ItemStack>> getBedIngredients(Item bedItem) {
+		Identifier bedId = BuiltInRegistries.ITEM.getKey(bedItem);
+		String path = bedId.getPath();
+
+		if (!path.endsWith("_bed")) {
+			return Optional.empty();
+		}
+
+		String color = path.substring(0, path.length() - "_bed".length());
+
+		Identifier woolId = Identifier.fromNamespaceAndPath(
+				bedId.getNamespace(),
+				color + "_wool"
+		);
+
+		Optional<Item> wool = BuiltInRegistries.ITEM.getOptional(woolId);
+
+		if (wool.isEmpty()) {
+			return Optional.empty();
+		}
+
+		List<ItemStack> ingredients = new ArrayList<>();
+
+		for (int i = 0; i < 3; i++) {
+			ingredients.add(new ItemStack(wool.get()));
+			ingredients.add(new ItemStack(Items.OAK_PLANKS));
+		}
+
+		return Optional.of(ingredients);
+	}
+	
+	private static List<ItemStack> createIngredients(Item item, int count) {
+		List<ItemStack> ingredients = new ArrayList<>();
+
+		for (int i = 0; i < count; i++) {
+			ingredients.add(new ItemStack(item));
+		}
+
+		return ingredients;
+	}
+
+	private static Optional<List<ItemStack>> getSpecialIngredients(
+			ItemStack input
+	) {
+		Item item = input.getItem();
+
+		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
+		String path = inputId.getPath();
+
+		if (item == Items.LEAD) {
+			return Optional.of(
+					createIngredients(Items.STRING, 2)
+			);
+		}
+
+		if (path.endsWith("_wool")) {
+			return Optional.of(
+					createIngredients(Items.STRING, 4)
+			);
+		}
+
+		if (isDyedShulkerBox(input)) {
+			return Optional.of(
+					List.of(new ItemStack(Items.SHULKER_BOX))
+			);
+		}
+
+		if (path.endsWith("_harness")) {
+			String color = path.substring(
+					0,
+					path.length() - "_harness".length()
+			);
+
+			Identifier woolId = Identifier.fromNamespaceAndPath(
+					inputId.getNamespace(),
+					color + "_wool"
+			);
+
+			Optional<Item> wool =
+					BuiltInRegistries.ITEM.getOptional(woolId);
+
+			if (wool.isEmpty()) {
+				return Optional.empty();
+			}
+
+			List<ItemStack> ingredients = new ArrayList<>();
+
+			ingredients.addAll(createIngredients(Items.LEATHER, 3));
+			ingredients.addAll(createIngredients(Items.GLASS, 2));
+			ingredients.add(new ItemStack(wool.get()));
+
+			return Optional.of(ingredients);
+		}
+
+		if (path.endsWith("_cushion")) {
+			String color = path.substring(
+					0,
+					path.length() - "_cushion".length()
+			);
+
+			Identifier slabId = Identifier.fromNamespaceAndPath(
+					inputId.getNamespace(),
+					color + "_wool_slab"
+			);
+
+			Optional<Item> slab =
+					BuiltInRegistries.ITEM.getOptional(slabId);
+
+			if (slab.isEmpty()) {
+				return Optional.empty();
+			}
+
+			return Optional.of(
+					createIngredients(slab.get(), 3)
+			);
+		}
+
+		if (path.endsWith("_shelf")) {
+			String wood = path.substring(
+					0,
+					path.length() - "_shelf".length()
+			);
+
+			Identifier plankId = Identifier.fromNamespaceAndPath(
+					inputId.getNamespace(),
+					wood + "_planks"
+			);
+
+			Optional<Item> plank =
+					BuiltInRegistries.ITEM.getOptional(plankId);
+
+			if (plank.isEmpty()) {
+				return Optional.empty();
+			}
+
+			return Optional.of(
+					createIngredients(plank.get(), 1)
+			);
+		}
+
+		if (item == Items.IRON_DOOR) {
+			return Optional.of(
+					createIngredients(Items.IRON_INGOT, 2)
+			);
+		}
+
+		return getBedIngredients(item);
+	}
+	
+	private static Item getRecipeLookupItem(ItemStack input) {
+		Item item = input.getItem();
+
+		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
+		String path = inputId.getPath();
+
+		if (path.endsWith("_bundle") && item != Items.BUNDLE) {
+			Identifier bundleId = Identifier.fromNamespaceAndPath(
+					inputId.getNamespace(),
+					"bundle"
+			);
+
+			return BuiltInRegistries.ITEM.getOptional(bundleId)
+					.orElse(item);
+		}
+
+		if (path.startsWith("waxed_")
+				&& (path.endsWith("_copper_bulb")
+				|| path.endsWith("_copper_chest"))) {
+
+			Identifier normalId = Identifier.fromNamespaceAndPath(
+					inputId.getNamespace(),
+					path.substring("waxed_".length())
+			);
+
+			return BuiltInRegistries.ITEM.getOptional(normalId)
+					.orElse(item);
+		}
+
+		return item;
+	}
+	
+	private static List<ItemStack> rollRecovery(List<ItemStack> ingredients) {
+		Collections.shuffle(ingredients, RANDOM);
+
+		int ingredientCount = ingredients.size();
+
+		List<ItemStack> recoveredItems = new ArrayList<>();
+
+		for (int i = 0; i < ingredientCount; i++) {
+			int x = ingredientCount - i;
+
+			double chance =
+					(100.0 * x) / (ingredientCount + 1);
+
+			if (RANDOM.nextDouble() * 100.0 < chance) {
+				recoveredItems.add(ingredients.get(i).copy());
+			}
+		}
+
+		return recoveredItems;
 	}
 	
 	private static Optional<Item> getSupportedMultiOutputPlank(
@@ -119,6 +361,17 @@ public final class RecyclerLogic {
         if (RecoveryRule.hasApplicableRule(input)) {
             return true;
         }
+		
+		if (getSpecialIngredients(input).isPresent()) {
+			return true;
+		}
+
+		Item recipeInput = getRecipeLookupItem(input);
+		
+		if (isDyedShulkerBox(input)
+				|| getBedIngredients(input.getItem()).isPresent()) {
+			return true;
+		}
 
         List<RecipeHolder<?>> recipes = new ArrayList<>(
                 level.getServer().getRecipeManager().getRecipes()
@@ -147,7 +400,7 @@ public final class RecyclerLogic {
                 ItemStack result = getStaticResult(recipe);
 
 				if (result.isEmpty()
-						|| result.getItem() != input.getItem()) {
+						|| result.getItem() != recipeInput) {
 					continue;
 				}
 
@@ -227,6 +480,31 @@ public final class RecyclerLogic {
 
 		if (specialResult.isPresent()) {
 			return specialResult;
+		}
+		
+		Optional<List<ItemStack>> specialIngredients =
+				getSpecialIngredients(input);
+
+		if (specialIngredients.isPresent()) {
+			return Optional.of(
+					rollRecovery(specialIngredients.get())
+			);
+		}
+
+		Item recipeInput = getRecipeLookupItem(input);
+		
+		if (isDyedShulkerBox(input)) {
+			List<ItemStack> ingredients = new ArrayList<>();
+			ingredients.add(new ItemStack(Items.SHULKER_BOX));
+
+			return Optional.of(rollRecovery(ingredients));
+		}
+
+		Optional<List<ItemStack>> bedIngredients =
+				getBedIngredients(input.getItem());
+
+		if (bedIngredients.isPresent()) {
+			return Optional.of(rollRecovery(bedIngredients.get()));
 		}
 
         List<RecipeHolder<?>> recipes = new ArrayList<>(
@@ -341,29 +619,7 @@ public final class RecyclerLogic {
 					}
 				}
 
-                Collections.shuffle(ingredients, RANDOM);
-
-                int ingredientCount = ingredients.size();
-
-                List<ItemStack> recoveredItems = new ArrayList<>();
-
-                for (int i = 0; i < ingredientCount; i++) {
-                    int x = ingredientCount - i;
-
-                    double chance =
-                            (100.0 * x) / (ingredientCount + 1);
-
-                    if (RANDOM.nextDouble() * 100.0 < chance) {
-                        recoveredItems.add(ingredients.get(i).copy());
-                    }
-                }
-
-				if (recoveredItems.isEmpty()) {
-
-					return Optional.of(recoveredItems);
-				}
-
-                return Optional.of(recoveredItems);
+				return Optional.of(rollRecovery(ingredients));
 
             } catch (RuntimeException exception) {
             }
