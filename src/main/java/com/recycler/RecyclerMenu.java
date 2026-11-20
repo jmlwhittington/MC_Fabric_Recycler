@@ -107,6 +107,9 @@ public class RecyclerMenu extends AbstractContainerMenu {
 
         ItemStack stack = slot.getItem();
         ItemStack original = stack.copy();
+		
+		int inputCountBefore =
+			container.getItem(RecyclerBlockEntity.INPUT_SLOT).getCount();
 
         if (slotIndex < MACHINE_END) {
 
@@ -155,6 +158,13 @@ public class RecyclerMenu extends AbstractContainerMenu {
         } else {
             slot.setChanged();
         }
+
+		if (blockEntity != null
+				&& container.getItem(RecyclerBlockEntity.INPUT_SLOT).getCount()
+				!= inputCountBefore) {
+
+			blockEntity.resetProcessingState();
+		}
 
         return original;
     }

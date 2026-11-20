@@ -71,23 +71,26 @@ public class RecyclerBlockEntity extends BlockEntity
         return items.get(slot);
     }
 
-    @Override
-    public ItemStack removeItem(int slot, int amount) {
-        ItemStack result = ContainerHelper.removeItem(items, slot, amount);
+	@Override
+	public ItemStack removeItem(int slot, int amount) {
+		ItemStack previous = items.get(slot).copy();
 
-        if (!result.isEmpty()) {
-            if (slot == INPUT_SLOT) {
-                processingTicks = 0;
-                isProcessing = false;
-                inputRejected = false;
-                pendingRecovery = null;
-            }
+		ItemStack result = ContainerHelper.removeItem(items, slot, amount);
 
-            setChanged();
-        }
+		if (!result.isEmpty()) {
+			if (slot == INPUT_SLOT
+					&& !sameInputItem(previous, items.get(slot))) {
+				processingTicks = 0;
+				isProcessing = false;
+				inputRejected = false;
+				pendingRecovery = null;
+			}
 
-        return result;
-    }
+			setChanged();
+		}
+
+		return result;
+	}
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
@@ -103,23 +106,33 @@ public class RecyclerBlockEntity extends BlockEntity
         return result;
     }
 
-    @Override
-    public void setItem(int slot, ItemStack stack) {
-        items.set(slot, stack);
+	private boolean sameInputItem(ItemStack first, ItemStack second) {
+		if (first.isEmpty() || second.isEmpty()) {
+			return first.isEmpty() && second.isEmpty();
+		}
 
-        if (!stack.isEmpty()) {
-            stack.limitSize(Math.min(getMaxStackSize(), stack.getMaxStackSize()));
-        }
+		return ItemStack.isSameItemSameComponents(first, second);
+	}
 
-        if (slot == INPUT_SLOT) {
-            processingTicks = 0;
-            isProcessing = false;
-            inputRejected = false;
-            pendingRecovery = null;
-        }
+	@Override
+	public void setItem(int slot, ItemStack stack) {
+		ItemStack previous = items.get(slot);
 
-        setChanged();
-    }
+		items.set(slot, stack);
+
+		if (!stack.isEmpty()) {
+			stack.limitSize(Math.min(getMaxStackSize(), stack.getMaxStackSize()));
+		}
+
+		if (slot == INPUT_SLOT && !sameInputItem(previous, stack)) {
+			processingTicks = 0;
+			isProcessing = false;
+			inputRejected = false;
+			pendingRecovery = null;
+		}
+
+		setChanged();
+	}
 
     @Override
     public void clearContent() {
@@ -335,6 +348,14 @@ public class RecyclerBlockEntity extends BlockEntity
     public int getProcessingTicks() {
         return processingTicks;
     }
+	
+	public void resetProcessingState() {
+		processingTicks = 0;
+		isProcessing = false;
+		inputRejected = false;
+		pendingRecovery = null;
+		setChanged();
+	}
 	
 	public boolean isInputRejected() {
 		return inputRejected;
