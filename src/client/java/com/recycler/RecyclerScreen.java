@@ -106,40 +106,98 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
                 82,
                 0xFF202020
         );
+		
+		drawSlot(graphics, x + 26, y + 35);
+
+		for (int row = 0; row < 2; row++) {
+			for (int col = 0; col < 3; col++) {
+				drawSlot(
+						graphics,
+						x + 112 + col * 18,
+						y + 26 + row * 18
+				);
+			}
+		}
+
+		for (int row = 0; row < 3; row++) {
+			for (int col = 0; col < 9; col++) {
+				drawSlot(
+						graphics,
+						x + 8 + col * 18,
+						y + 84 + row * 18
+				);
+			}
+		}
+
+		for (int col = 0; col < 9; col++) {
+			drawSlot(
+					graphics,
+					x + 8 + col * 18,
+					y + 142
+			);
+		}
     }
 
-    @Override
-    protected void extractLabels(
-            GuiGraphicsExtractor graphics,
-            int mouseX,
-            int mouseY
-    ) {
-        super.extractLabels(graphics, mouseX, mouseY);
+	private void drawSlot(GuiGraphicsExtractor graphics, int x, int y) {
+		graphics.fill(
+				x, y,
+				x + 18, y + 18,
+				0xFF202020
+		);
 
-        graphics.text(
-                this.font,
-                "Input",
-                24,
-                21,
-                0xFFFFFFFF
-        );
+		graphics.fill(
+				x + 1, y + 1,
+				x + 17, y + 17,
+				0xFF777777
+		);
+	}
 
-        graphics.text(
-                this.font,
-                "Progress",
-                63,
-                27,
-                0xFFFFFFFF
-        );
+	@Override
+	protected void extractLabels(
+			GuiGraphicsExtractor graphics,
+			int mouseX,
+			int mouseY
+	) {
+		graphics.text(
+				this.font,
+				this.title,
+				this.titleLabelX,
+				this.titleLabelY,
+				0xFFFFFFFF
+		);
 
-        graphics.text(
-                this.font,
-                "Output",
-                112,
-                12,
-                0xFFFFFFFF
-        );
-		
+		graphics.text(
+				this.font,
+				Component.translatable("container.inventory"),
+				8,
+				this.inventoryLabelY,
+				0xFFFFFFFF
+		);
+
+		graphics.text(
+				this.font,
+				"Input",
+				24,
+				21,
+				0xFFFFFFFF
+		);
+
+		graphics.text(
+				this.font,
+				"Progress",
+				63,
+				27,
+				0xFFFFFFFF
+		);
+
+		graphics.text(
+				this.font,
+				"Output",
+				112,
+				12,
+				0xFFFFFFFF
+		);
+
 		graphics.text(
 				this.font,
 				this.menu.getStatusText(),
@@ -147,5 +205,5 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 				51,
 				0xFFFFFFFF
 		);
-    }
+	}
 }
