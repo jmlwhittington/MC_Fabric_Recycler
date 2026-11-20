@@ -55,7 +55,7 @@ public final class RecyclerLogic {
 
 		if (path.equals("target")
 				|| path.equals("carpet")
-				|| path.endsWith("_carpet"))
+				|| path.endsWith("_carpet")
 				|| path.endsWith("_ingot")) {
 			return true;
 		}
