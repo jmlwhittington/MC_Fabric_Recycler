@@ -51,8 +51,8 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         );
 
 		graphics.fill(
-				x + 51, y + 41,
-				x + 91, y + 49,
+				x + 61, y + 40,
+				x + 101, y + 47,
 				0xFF555555
 		);
 
@@ -60,26 +60,26 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 
 		if (progressWidth > 0) {
 			graphics.fill(
-					x + 52, y + 42,
-					x + 52 + progressWidth, y + 48,
+					x + 62, y + 41,
+					x + 62 + progressWidth, y + 46,
 					0xFF55AA55
 			);
 		}
 
 		graphics.outline(
-				x + 51, y + 41,
+				x + 61, y + 40,
 				40, 8,
 				0xFF404040
 		);
 
-		drawSlot(graphics, x + 24, y + 41);
+		drawSlot(graphics, x + 24, y + 35);
 
 		for (int row = 0; row < 2; row++) {
 			for (int col = 0; col < 3; col++) {
 				drawSlot(
 						graphics,
-						x + 99 + col * 18,
-						y + 33 + row * 18
+						x + 116 + col * 18,
+						y + 30 + row * 18
 				);
 			}
 		}
@@ -147,8 +147,8 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 		graphics.text(
 				this.font,
 				"Input",
-				20,
-				27,
+				21,
+				22,
 				textColor,
 				false
 		);
@@ -156,8 +156,8 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 		graphics.text(
 				this.font,
 				"Progress",
-				47,
-				35,
+				57,
+				28,
 				textColor,
 				false
 		);
@@ -167,19 +167,21 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 		graphics.text(
 				this.font,
 				outputLabel,
-				80 + (54 - this.font.width(outputLabel)) / 2,
-				19,
+				128,
+				16,
 				textColor,
 				false
 		);
 
 		String status = this.menu.getStatusText();
 
+		int statusCenter = 71 + this.font.width("Idle") / 2;
+
 		graphics.text(
 				this.font,
 				status,
-				53 + (40 - this.font.width(status)) / 2,
-				51,
+				statusCenter - this.font.width(status) / 2,
+				52,
 				textColor,
 				false
 		);
