@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.DataSlot;
 
 public class RecyclerMenu extends AbstractContainerMenu {
 
@@ -18,6 +19,14 @@ public class RecyclerMenu extends AbstractContainerMenu {
     private static final int PLAYER_END = PLAYER_START + 36;
 
     private final Container container;
+	
+	private static final int STATUS_IDLE = 0;
+	private static final int STATUS_PROCESSING = 1;
+	private static final int STATUS_WAITING = 2;
+	private static final int STATUS_REJECTED = 3;
+
+	private final RecyclerBlockEntity blockEntity;
+	private final int[] machineData = new int[2];
 
     public RecyclerMenu(int containerId, Inventory playerInventory) {
         this(
@@ -40,6 +49,13 @@ public class RecyclerMenu extends AbstractContainerMenu {
         );
 
         this.container = container;
+		
+		this.blockEntity = container instanceof RecyclerBlockEntity recycler
+				? recycler
+				: null;
+
+		addDataSlot(DataSlot.shared(machineData, 0));
+		addDataSlot(DataSlot.shared(machineData, 1));
 
         container.startOpen(playerInventory.player);
 
@@ -66,6 +82,43 @@ public class RecyclerMenu extends AbstractContainerMenu {
 
         addStandardInventorySlots(playerInventory, 8, 84);
     }
+
+	@Override
+	public void broadcastChanges() {
+		if (blockEntity != null) {
+			machineData[0] = blockEntity.getProcessingTicks();
+
+			if (blockEntity.isInputRejected()) {
+				machineData[1] = STATUS_REJECTED;
+			} else if (blockEntity.isWaitingForOutputSpace()) {
+				machineData[1] = STATUS_WAITING;
+			} else if (blockEntity.isProcessing()) {
+				machineData[1] = STATUS_PROCESSING;
+			} else {
+				machineData[1] = STATUS_IDLE;
+			}
+		}
+
+		super.broadcastChanges();
+	}
+
+	public float getProgress() {
+		return Math.min(1.0F,
+				Math.max(0.0F, machineData[0] / (float) RecyclerBlockEntity.PROCESSING_TIME));
+	}
+
+	public int getMachineStatus() {
+		return machineData[1];
+	}
+
+	public String getStatusText() {
+		return switch (machineData[1]) {
+			case STATUS_PROCESSING -> "Working";
+			case STATUS_WAITING -> "Output full";
+			case STATUS_REJECTED -> "Rejected";
+			default -> "Idle";
+		};
+	}
 
     @Override
     public ItemStack quickMoveStack(Player player, int slotIndex) {

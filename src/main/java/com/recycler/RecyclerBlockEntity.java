@@ -347,6 +347,15 @@ public class RecyclerBlockEntity extends BlockEntity
     public boolean isProcessing() {
         return isProcessing;
     }
+	
+	public boolean isInputRejected() {
+		return inputRejected;
+	}
+
+	public boolean isWaitingForOutputSpace() {
+		return pendingRecovery != null
+				&& !canFitAll(pendingRecovery);
+	}
 
     @Override
     public int[] getSlotsForFace(Direction side) {

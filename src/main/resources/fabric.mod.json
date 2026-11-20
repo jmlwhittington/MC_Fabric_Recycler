@@ -8,6 +8,9 @@
   "entrypoints": {
     "main": [
       "com.recycler.RecyclerMod"
+    ],
+    "client": [
+      "com.recycler.RecyclerClient"
     ]
   },
   "depends": {
