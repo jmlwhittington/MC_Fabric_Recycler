@@ -53,8 +53,7 @@ public final class RecyclerLogic {
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(input.getItem());
 		String path = inputId.getPath();
 
-		if (path.equals("target")
-				|| path.equals("carpet")
+		if (path.equals("carpet")
 				|| path.endsWith("_carpet")
 				|| path.endsWith("_ingot")) {
 			return true;
@@ -143,6 +142,12 @@ public final class RecyclerLogic {
 
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
+		
+		if (item == Items.TARGET) {
+			return Optional.of(
+					createIngredients(Items.HAY_BLOCK, 1)
+			);
+		}
 
 		if (item == Items.LEAD) {
 			return Optional.of(
@@ -153,12 +158,6 @@ public final class RecyclerLogic {
 		if (path.endsWith("_wool")) {
 			return Optional.of(
 					createIngredients(Items.STRING, 4)
-			);
-		}
-
-		if (isDyedShulkerBox(input)) {
-			return Optional.of(
-					List.of(new ItemStack(Items.SHULKER_BOX))
 			);
 		}
 
@@ -249,6 +248,10 @@ public final class RecyclerLogic {
 
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
+		
+		if (isDyedShulkerBox(input)) {
+			return Items.SHULKER_BOX;
+		}
 
 		if (path.endsWith("_bundle") && item != Items.BUNDLE) {
 			Identifier bundleId = Identifier.fromNamespaceAndPath(
@@ -492,13 +495,6 @@ public final class RecyclerLogic {
 		}
 
 		Item recipeInput = getRecipeLookupItem(input);
-		
-		if (isDyedShulkerBox(input)) {
-			List<ItemStack> ingredients = new ArrayList<>();
-			ingredients.add(new ItemStack(Items.SHULKER_BOX));
-
-			return Optional.of(rollRecovery(ingredients));
-		}
 
 		Optional<List<ItemStack>> bedIngredients =
 				getBedIngredients(input.getItem());
@@ -536,10 +532,10 @@ public final class RecyclerLogic {
             try {
                 ItemStack result = getStaticResult(recipe);
 
-                if (result.isEmpty()
-                        || result.getItem() != input.getItem()) {
-                    continue;
-                }
+				if (result.isEmpty()
+						|| result.getItem() != recipeInput) {
+					continue;
+				}
 
                 List<Ingredient> recipeIngredients =
                         craftingRecipe.placementInfo().ingredients();
