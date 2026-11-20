@@ -59,24 +59,24 @@ public class RecyclerMenu extends AbstractContainerMenu {
 
         container.startOpen(playerInventory.player);
 
-        addSlot(new Slot(
-                container,
-                RecyclerBlockEntity.INPUT_SLOT,
-                26,
-                35
-        ));
+		addSlot(new Slot(
+				container,
+				RecyclerBlockEntity.INPUT_SLOT,
+				24,
+				34
+		));
 
         for (int row = 0; row < 2; row++) {
             for (int column = 0; column < 3; column++) {
                 int slot = RecyclerBlockEntity.OUTPUT_START
                         + row * 3 + column;
 
-                addSlot(new Slot(
-                        container,
-                        slot,
-                        112 + column * 18,
-                        26 + row * 18
-                ));
+				addSlot(new Slot(
+						container,
+						slot,
+						115 + column * 18,
+						29 + row * 18
+				));
             }
         }
 

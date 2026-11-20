@@ -1,4 +1,3 @@
-
 package com.recycler;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -38,26 +37,22 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         int y = this.topPos;
 
         graphics.fill(
-                x,
-                y,
+                x, y,
                 x + this.imageWidth,
                 y + this.imageHeight,
                 0xFFC6C6C6
         );
 
         graphics.outline(
-                x,
-                y,
+                x, y,
                 this.imageWidth,
                 this.imageHeight,
                 0xFF404040
         );
 
         graphics.fill(
-                x + 63,
-                y + 39,
-                x + 103,
-                y + 47,
+                x + 60, y + 39,
+                x + 100, y + 47,
                 0xFF555555
         );
 
@@ -65,30 +60,26 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 
         if (progressWidth > 0) {
             graphics.fill(
-                    x + 64,
-                    y + 40,
-                    x + 64 + progressWidth,
-                    y + 46,
+                    x + 61, y + 40,
+                    x + 61 + progressWidth, y + 46,
                     0xFF55AA55
             );
         }
 
         graphics.outline(
-                x + 63,
-                y + 39,
-                40,
-                8,
+                x + 60, y + 39,
+                40, 8,
                 0xFF404040
         );
 
-        drawSlot(graphics, x + 26, y + 35);
+        drawSlot(graphics, x + 24, y + 34);
 
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 3; col++) {
                 drawSlot(
                         graphics,
-                        x + 112 + col * 18,
-                        y + 26 + row * 18
+                        x + 115 + col * 18,
+                        y + 29 + row * 18
                 );
             }
         }
@@ -133,7 +124,7 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
             int mouseX,
             int mouseY
     ) {
-        int textColor = 0xFF404040;
+        int textColor = 0xFF666666;
 
         graphics.text(
                 this.font,
@@ -151,23 +142,19 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
                 textColor
         );
 
-        String inputLabel = "Input";
-
         graphics.text(
                 this.font,
-                inputLabel,
-                26 + (18 - this.font.width(inputLabel)) / 2,
-                21,
+                "Input",
+                20,
+                20,
                 textColor
         );
 
-        String progressLabel = "Progress";
-
         graphics.text(
                 this.font,
-                progressLabel,
-                63 + (40 - this.font.width(progressLabel)) / 2,
-                27,
+                "Progress",
+                56,
+                26,
                 textColor
         );
 
@@ -176,8 +163,8 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         graphics.text(
                 this.font,
                 outputLabel,
-                112 + (54 - this.font.width(outputLabel)) / 2,
-                12,
+                114 + (54 - this.font.width(outputLabel)) / 2,
+                15,
                 textColor
         );
 
@@ -186,7 +173,7 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         graphics.text(
                 this.font,
                 status,
-                63 + (40 - this.font.width(status)) / 2,
+                60 + (40 - this.font.width(status)) / 2,
                 51,
                 textColor
         );
