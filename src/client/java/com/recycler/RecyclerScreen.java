@@ -1,11 +1,17 @@
+
 package com.recycler;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
+
+    private static final Identifier SLOT_SPRITE =
+            Identifier.withDefaultNamespace("container/slot");
 
     public RecyclerScreen(
             RecyclerMenu menu,
@@ -36,7 +42,7 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
                 y,
                 x + this.imageWidth,
                 y + this.imageHeight,
-                0xFF383838
+                0xFFC6C6C6
         );
 
         graphics.outline(
@@ -44,23 +50,7 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
                 y,
                 this.imageWidth,
                 this.imageHeight,
-                0xFF101010
-        );
-
-        graphics.fill(
-                x + 8,
-                y + 17,
-                x + 168,
-                y + 67,
-                0xFF484848
-        );
-
-        graphics.outline(
-                x + 8,
-                y + 17,
-                160,
-                50,
-                0xFF202020
+                0xFF404040
         );
 
         graphics.fill(
@@ -68,142 +58,137 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
                 y + 39,
                 x + 103,
                 y + 47,
-                0xFF202020
+                0xFF555555
         );
-		
-		int progressWidth = Math.round(38 * this.menu.getProgress());
 
-		if (progressWidth > 0) {
-			graphics.fill(
-					x + 64,
-					y + 40,
-					x + 64 + progressWidth,
-					y + 46,
-					0xFF55CC55
-			);
-		}
+        int progressWidth = Math.round(38 * this.menu.getProgress());
+
+        if (progressWidth > 0) {
+            graphics.fill(
+                    x + 64,
+                    y + 40,
+                    x + 64 + progressWidth,
+                    y + 46,
+                    0xFF55AA55
+            );
+        }
 
         graphics.outline(
                 x + 63,
                 y + 39,
                 40,
                 8,
-                0xFF101010
+                0xFF404040
         );
 
-        graphics.fill(
-                x + 7,
-                y + 80,
-                x + 169,
-                y + 162,
-                0xFF484848
-        );
+        drawSlot(graphics, x + 26, y + 35);
 
-        graphics.outline(
-                x + 7,
-                y + 80,
-                162,
-                82,
-                0xFF202020
-        );
-		
-		drawSlot(graphics, x + 26, y + 35);
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 3; col++) {
+                drawSlot(
+                        graphics,
+                        x + 112 + col * 18,
+                        y + 26 + row * 18
+                );
+            }
+        }
 
-		for (int row = 0; row < 2; row++) {
-			for (int col = 0; col < 3; col++) {
-				drawSlot(
-						graphics,
-						x + 112 + col * 18,
-						y + 26 + row * 18
-				);
-			}
-		}
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                drawSlot(
+                        graphics,
+                        x + 8 + col * 18,
+                        y + 84 + row * 18
+                );
+            }
+        }
 
-		for (int row = 0; row < 3; row++) {
-			for (int col = 0; col < 9; col++) {
-				drawSlot(
-						graphics,
-						x + 8 + col * 18,
-						y + 84 + row * 18
-				);
-			}
-		}
-
-		for (int col = 0; col < 9; col++) {
-			drawSlot(
-					graphics,
-					x + 8 + col * 18,
-					y + 142
-			);
-		}
+        for (int col = 0; col < 9; col++) {
+            drawSlot(
+                    graphics,
+                    x + 8 + col * 18,
+                    y + 142
+            );
+        }
     }
 
-	private void drawSlot(GuiGraphicsExtractor graphics, int x, int y) {
-		graphics.fill(
-				x, y,
-				x + 18, y + 18,
-				0xFF202020
-		);
+    private void drawSlot(
+            GuiGraphicsExtractor graphics,
+            int x,
+            int y
+    ) {
+        graphics.blitSprite(
+                RenderPipelines.GUI_TEXTURED,
+                SLOT_SPRITE,
+                x - 1,
+                y - 1,
+                18,
+                18
+        );
+    }
 
-		graphics.fill(
-				x + 1, y + 1,
-				x + 17, y + 17,
-				0xFF777777
-		);
-	}
+    @Override
+    protected void extractLabels(
+            GuiGraphicsExtractor graphics,
+            int mouseX,
+            int mouseY
+    ) {
+        int textColor = 0xFF404040;
 
-	@Override
-	protected void extractLabels(
-			GuiGraphicsExtractor graphics,
-			int mouseX,
-			int mouseY
-	) {
-		graphics.text(
-				this.font,
-				this.title,
-				this.titleLabelX,
-				this.titleLabelY,
-				0xFFFFFFFF
-		);
+        graphics.text(
+                this.font,
+                this.title,
+                this.titleLabelX,
+                this.titleLabelY,
+                textColor
+        );
 
-		graphics.text(
-				this.font,
-				Component.translatable("container.inventory"),
-				8,
-				this.inventoryLabelY,
-				0xFFFFFFFF
-		);
+        graphics.text(
+                this.font,
+                Component.translatable("container.inventory"),
+                8,
+                this.inventoryLabelY,
+                textColor
+        );
 
-		graphics.text(
-				this.font,
-				"Input",
-				24,
-				21,
-				0xFFFFFFFF
-		);
+        String inputLabel = "Input";
 
-		graphics.text(
-				this.font,
-				"Progress",
-				63,
-				27,
-				0xFFFFFFFF
-		);
+        graphics.text(
+                this.font,
+                inputLabel,
+                26 + (18 - this.font.width(inputLabel)) / 2,
+                21,
+                textColor
+        );
 
-		graphics.text(
-				this.font,
-				"Output",
-				112,
-				12,
-				0xFFFFFFFF
-		);
+        String progressLabel = "Progress";
 
-		graphics.text(
-				this.font,
-				this.menu.getStatusText(),
-				63,
-				51,
-				0xFFFFFFFF
-		);
-	}
+        graphics.text(
+                this.font,
+                progressLabel,
+                63 + (40 - this.font.width(progressLabel)) / 2,
+                27,
+                textColor
+        );
+
+        String outputLabel = "Output";
+
+        graphics.text(
+                this.font,
+                outputLabel,
+                112 + (54 - this.font.width(outputLabel)) / 2,
+                12,
+                textColor
+        );
+
+        String status = this.menu.getStatusText();
+
+        graphics.text(
+                this.font,
+                status,
+                63 + (40 - this.font.width(status)) / 2,
+                51,
+                textColor
+        );
+    }
 }
