@@ -36,6 +36,10 @@ public final class RecyclerLogic {
     }
 	
 	private static boolean isProtectedInput(ItemStack input) {
+		if (input.has(DataComponents.FOOD)) {
+			return true;
+		}
+		
 		if (!(input.getItem() instanceof BlockItem blockItem)
 				|| !(blockItem.getBlock() instanceof ShulkerBoxBlock)) {
 			return false;

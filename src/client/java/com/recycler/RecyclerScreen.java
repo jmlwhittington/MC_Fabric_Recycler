@@ -51,16 +51,15 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         );
 
 		graphics.fill(
-				x + 60, y + 38,
-				x + 100, y + 45,
+				x + 61, y + 38,
+				x + 101, y + 45,
 				0xFF555555
 		);
 
-
 		if (this.menu.isInputRejected()) {
 			graphics.fill(
-					x + 61, y + 39,
-					x + 99, y + 45,
+					x + 62, y + 39,
+					x + 100, y + 45,
 					0xFFAA3333
 			);
 		} else {
@@ -68,15 +67,15 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 
 			if (progressWidth > 0) {
 				graphics.fill(
-						x + 61, y + 39,
-						x + 61 + progressWidth, y + 45,
+						x + 62, y + 39,
+						x + 62 + progressWidth, y + 45,
 						0xFF55AA55
 				);
 			}
 		}
 
 		graphics.outline(
-				x + 60, y + 38,
+				x + 61, y + 38,
 				40, 8,
 				0xFF404040
 		);

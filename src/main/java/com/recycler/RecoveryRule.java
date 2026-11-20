@@ -25,7 +25,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public final class RecoveryRule {
+
+	private static final Logger LOGGER =
+        LoggerFactory.getLogger(RecoveryRule.class);
 
     private static final Path CONFIG_DIRECTORY =
             FabricLoader.getInstance().getConfigDir().resolve("recycler");
@@ -63,6 +69,12 @@ public final class RecoveryRule {
             reload();
 
         } catch (IOException exception) {
+		    LOGGER.error(
+					"Failed to initialize Recycler recovery-rule configuration at '{}': {}",
+					CONFIG_DIRECTORY,
+					exception.getMessage(),
+					exception
+			);
         }
     }
 
@@ -96,7 +108,14 @@ public final class RecoveryRule {
             return true;
 
         } catch (Exception exception) {
-            return false;
+			LOGGER.error(
+					"Failed to load Recycler recovery rules from '{}': {}",
+					CONFIG_FILE,
+					exception.getMessage(),
+					exception
+			);
+
+			return false;
         }
     }
 
@@ -218,10 +237,22 @@ public final class RecoveryRule {
                 );
             }
 
-            Identifier outputId =
-                    parseIdentifier(output.get("item").getAsString());
+			String outputIdentifier = output.get("item").getAsString();
 
-            Item outputItem = getRegisteredItem(outputId);
+			Item outputItem;
+
+			try {
+				Identifier outputId = parseIdentifier(outputIdentifier);
+				outputItem = getRegisteredItem(outputId);
+
+			} catch (RuntimeException exception) {
+				throw new IllegalArgumentException(
+						"Invalid output item '" + outputIdentifier
+								+ "' in rules for " + description
+								+ ": " + exception.getMessage(),
+						exception
+				);
+			}
 
             int count = output.has("count")
                     ? output.get("count").getAsInt()
