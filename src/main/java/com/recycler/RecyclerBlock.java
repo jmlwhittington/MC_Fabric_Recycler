@@ -13,6 +13,10 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.BlockHitResult;
 
 public class RecyclerBlock extends HorizontalDirectionalBlock implements EntityBlock {
 
@@ -20,6 +24,25 @@ public class RecyclerBlock extends HorizontalDirectionalBlock implements EntityB
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
+	
+	@Override
+	public InteractionResult useWithoutItem(
+			BlockState state,
+			Level level,
+			BlockPos pos,
+			Player player,
+			BlockHitResult hit
+	) {
+		if (!level.isClientSide) {
+			BlockEntity blockEntity = level.getBlockEntity(pos);
+
+			if (blockEntity instanceof RecyclerBlockEntity recycler) {
+				player.openMenu(recycler);
+			}
+		}
+
+		return InteractionResult.SUCCESS;
+	}
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
