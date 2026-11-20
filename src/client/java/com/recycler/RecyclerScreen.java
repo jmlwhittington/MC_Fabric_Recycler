@@ -51,35 +51,44 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         );
 
 		graphics.fill(
-				x + 61, y + 39,
-				x + 101, y + 46,
+				x + 61, y + 43,
+				x + 101, y + 50,
 				0xFF555555
 		);
 
-		int progressWidth = Math.round(38 * this.menu.getProgress());
 
-		if (progressWidth > 0) {
+		if (this.menu.isInputRejected()) {
 			graphics.fill(
-					x + 62, y + 40,
-					x + 62 + progressWidth, y + 46,
-					0xFF55AA55
+					x + 62, y + 44,
+					x + 62 + progressWidth, y + 50,
+					0xFFAA3333
 			);
+		} else {
+			int progressWidth = Math.round(38 * this.menu.getProgress());
+
+			if (progressWidth > 0) {
+				graphics.fill(
+						x + 62, y + 44,
+						x + 62 + progressWidth, y + 50,
+						0xFF55AA55
+				);
+			}
 		}
 
 		graphics.outline(
-				x + 61, y + 39,
+				x + 61, y + 43,
 				40, 8,
 				0xFF404040
 		);
 
-		drawSlot(graphics, x + 24, y + 35);
+		drawSlot(graphics, x + 26, y + 34);
 
 		for (int row = 0; row < 2; row++) {
 			for (int col = 0; col < 3; col++) {
 				drawSlot(
 						graphics,
 						x + 116 + col * 18,
-						y + 30 + row * 18
+						y + 34 + row * 18
 				);
 			}
 		}
@@ -147,17 +156,8 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 		graphics.text(
 				this.font,
 				"Input",
-				20,
 				21,
-				textColor,
-				false
-		);
-
-		graphics.text(
-				this.font,
-				"Progress",
-				57,
-				28,
+				23,
 				textColor,
 				false
 		);
@@ -168,20 +168,7 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 				this.font,
 				outputLabel,
 				127,
-				16,
-				textColor,
-				false
-		);
-
-		String status = this.menu.getStatusText();
-
-		int statusCenter = 71 + this.font.width("Idle") / 2;
-
-		graphics.text(
-				this.font,
-				status,
-				statusCenter - this.font.width(status) / 2,
-				51,
+				23,
 				textColor,
 				false
 		);

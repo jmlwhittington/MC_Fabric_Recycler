@@ -156,53 +156,41 @@ public class RecyclerBlockEntity extends BlockEntity
                 ) <= 64.0;
     }
 
-    public static void serverTick(
-            Level level,
-            BlockPos pos,
-            BlockState state,
-            RecyclerBlockEntity blockEntity
-    ) {
-        if (level.isClientSide()) {
-            return;
-        }
+	public static void serverTick(
+			Level level,
+			BlockPos pos,
+			BlockState state,
+			RecyclerBlockEntity blockEntity
+	) {
+		if (level.isClientSide()) {
+			return;
+		}
 
-        ItemStack input = blockEntity.getItem(INPUT_SLOT);
+		ItemStack input = blockEntity.getItem(INPUT_SLOT);
 
-        if (input.isEmpty()) {
-            if (blockEntity.processingTicks != 0
-                    || blockEntity.isProcessing
-                    || blockEntity.pendingRecovery != null
-                    || blockEntity.inputRejected) {
+		if (input.isEmpty()) {
+			if (blockEntity.processingTicks != 0
+					|| blockEntity.isProcessing
+					|| blockEntity.pendingRecovery != null
+					|| blockEntity.inputRejected) {
 
-                blockEntity.processingTicks = 0;
-                blockEntity.isProcessing = false;
-                blockEntity.inputRejected = false;
-                blockEntity.pendingRecovery = null;
-                blockEntity.setChanged();
-            }
+				blockEntity.processingTicks = 0;
+				blockEntity.isProcessing = false;
+				blockEntity.inputRejected = false;
+				blockEntity.pendingRecovery = null;
+				blockEntity.setChanged();
+			}
 
-            return;
-        }
+			return;
+		}
 
-        if (blockEntity.inputRejected) {
-            return;
-        }
+		if (blockEntity.inputRejected) {
+			return;
+		}
 
-        if (blockEntity.pendingRecovery == null) {
-            if (blockEntity.processingTicks < PROCESSING_TIME) {
-                blockEntity.isProcessing = true;
-                blockEntity.processingTicks++;
-                blockEntity.setChanged();
-
-                if (blockEntity.processingTicks < PROCESSING_TIME) {
-                    return;
-                }
-            }
-
-            blockEntity.isProcessing = false;
-
-            Optional<List<ItemStack>> result =
-                    RecyclerLogic.recoverIngredients(level, input);
+		if (blockEntity.pendingRecovery == null) {
+			Optional<List<ItemStack>> result =
+					RecyclerLogic.recoverIngredients(level, input);
 
 			if (result.isEmpty()) {
 				blockEntity.processingTicks = 0;
@@ -212,29 +200,41 @@ public class RecyclerBlockEntity extends BlockEntity
 				return;
 			}
 
-            blockEntity.pendingRecovery = new ArrayList<>();
+			blockEntity.pendingRecovery = new ArrayList<>();
 
-            for (ItemStack stack : result.get()) {
-                if (!stack.isEmpty()) {
-                    blockEntity.pendingRecovery.add(stack.copy());
-                }
-            }
-
-			if (blockEntity.pendingRecovery.isEmpty()) {
-				blockEntity.consumeInput(input);
-				return;
+			for (ItemStack stack : result.get()) {
+				if (!stack.isEmpty()) {
+					blockEntity.pendingRecovery.add(stack.copy());
+				}
 			}
 
-            blockEntity.setChanged();
-        }
+			blockEntity.setChanged();
+		}
 
-        if (!blockEntity.canFitAll(blockEntity.pendingRecovery)) {
-            return;
-        }
+		if (blockEntity.processingTicks < PROCESSING_TIME) {
+			blockEntity.isProcessing = true;
+			blockEntity.processingTicks++;
+			blockEntity.setChanged();
+
+			if (blockEntity.processingTicks < PROCESSING_TIME) {
+				return;
+			}
+		}
+
+		blockEntity.isProcessing = false;
+
+		if (blockEntity.pendingRecovery.isEmpty()) {
+			blockEntity.consumeInput(input);
+			return;
+		}
+
+		if (!blockEntity.canFitAll(blockEntity.pendingRecovery)) {
+			return;
+		}
 
 		blockEntity.insertResults(blockEntity.pendingRecovery);
 		blockEntity.consumeInput(input);
-    }
+	}
 
 	private void consumeInput(ItemStack input) {
 		input.shrink(1);
@@ -343,19 +343,6 @@ public class RecyclerBlockEntity extends BlockEntity
     public int getProcessingTicks() {
         return processingTicks;
     }
-
-    public boolean isProcessing() {
-        return isProcessing;
-    }
-	
-	public boolean isInputRejected() {
-		return inputRejected;
-	}
-
-	public boolean isWaitingForOutputSpace() {
-		return pendingRecovery != null
-				&& !canFitAll(pendingRecovery);
-	}
 
     @Override
     public int[] getSlotsForFace(Direction side) {
