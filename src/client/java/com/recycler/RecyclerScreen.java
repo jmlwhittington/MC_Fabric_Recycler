@@ -60,7 +60,7 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 		if (this.menu.isInputRejected()) {
 			graphics.fill(
 					x + 62, y + 44,
-					x + 62 + progressWidth, y + 50,
+					x + 100, y + 50,
 					0xFFAA3333
 			);
 		} else {
