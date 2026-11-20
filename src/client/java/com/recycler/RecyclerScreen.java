@@ -51,8 +51,8 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         );
 
 		graphics.fill(
-				x + 61, y + 40,
-				x + 101, y + 47,
+				x + 61, y + 39,
+				x + 101, y + 46,
 				0xFF555555
 		);
 
@@ -60,14 +60,14 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 
 		if (progressWidth > 0) {
 			graphics.fill(
-					x + 62, y + 41,
+					x + 62, y + 40,
 					x + 62 + progressWidth, y + 46,
 					0xFF55AA55
 			);
 		}
 
 		graphics.outline(
-				x + 61, y + 40,
+				x + 61, y + 39,
 				40, 8,
 				0xFF404040
 		);
@@ -147,8 +147,8 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 		graphics.text(
 				this.font,
 				"Input",
+				20,
 				21,
-				22,
 				textColor,
 				false
 		);
@@ -167,7 +167,7 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 		graphics.text(
 				this.font,
 				outputLabel,
-				128,
+				127,
 				16,
 				textColor,
 				false
@@ -181,7 +181,7 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 				this.font,
 				status,
 				statusCenter - this.font.width(status) / 2,
-				52,
+				51,
 				textColor,
 				false
 		);
