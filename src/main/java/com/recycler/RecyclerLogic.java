@@ -154,7 +154,14 @@ public final class RecyclerLogic {
 
 			List<ItemStack> ingredients = new ArrayList<>();
 
-			ingredients.addAll(createIngredients(Items.COPPER_BLOCK, 3));
+			ingredients.addAll(
+					createIngredients(
+							BuiltInRegistries.ITEM.getValue(
+									Identifier.withDefaultNamespace("copper_block")
+							),
+							3
+					)
+			);
 			ingredients.add(new ItemStack(Items.BLAZE_ROD));
 			ingredients.add(new ItemStack(Items.REDSTONE));
 
