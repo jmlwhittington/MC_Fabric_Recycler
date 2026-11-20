@@ -58,20 +58,11 @@ public final class RecoveryRule {
                         """;
 
                 Files.writeString(CONFIG_FILE, defaultConfig);
-
-                RecyclerMod.LOGGER.info(
-                        "Created recovery rules configuration at {}",
-                        CONFIG_FILE
-                );
             }
 
             reload();
 
         } catch (IOException exception) {
-            RecyclerMod.LOGGER.error(
-                    "Could not create the recovery rules configuration.",
-                    exception
-            );
         }
     }
 
@@ -102,16 +93,9 @@ public final class RecoveryRule {
                     new LinkedHashMap<>(newTagRules)
             );
 
-            RecyclerMod.LOGGER.info("Recovery rules loaded successfully.");
-
             return true;
 
         } catch (Exception exception) {
-            RecyclerMod.LOGGER.error(
-                    "Failed to load recovery rules. Keeping the previous valid configuration.",
-                    exception
-            );
-
             return false;
         }
     }

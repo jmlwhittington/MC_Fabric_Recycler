@@ -11,7 +11,6 @@ import net.minecraft.world.inventory.DataSlot;
 
 public class RecyclerMenu extends AbstractContainerMenu {
 
-    private static final int MACHINE_START = 0;
     private static final int MACHINE_END = RecyclerBlockEntity.INVENTORY_SIZE;
 
     private static final int PLAYER_START = MACHINE_END;
@@ -61,19 +60,24 @@ public class RecyclerMenu extends AbstractContainerMenu {
 				34
 		));
 
-        for (int row = 0; row < 2; row++) {
-            for (int column = 0; column < 3; column++) {
-                int slot = RecyclerBlockEntity.OUTPUT_START
-                        + row * 3 + column;
+		for (int row = 0; row < 2; row++) {
+			for (int column = 0; column < 3; column++) {
+				int slot = RecyclerBlockEntity.OUTPUT_START
+						+ row * 3 + column;
 
 				addSlot(new Slot(
 						container,
 						slot,
 						116 + column * 18,
 						30 + row * 18
-				));
-            }
-        }
+				) {
+					@Override
+					public boolean mayPlace(ItemStack stack) {
+						return false;
+					}
+				});
+			}
+		}
 
         addStandardInventorySlots(playerInventory, 8, 84);
     }
@@ -107,9 +111,6 @@ public class RecyclerMenu extends AbstractContainerMenu {
 
         ItemStack stack = slot.getItem();
         ItemStack original = stack.copy();
-		
-		int inputCountBefore =
-			container.getItem(RecyclerBlockEntity.INPUT_SLOT).getCount();
 
         if (slotIndex < MACHINE_END) {
 
@@ -158,13 +159,6 @@ public class RecyclerMenu extends AbstractContainerMenu {
         } else {
             slot.setChanged();
         }
-
-		if (blockEntity != null
-				&& container.getItem(RecyclerBlockEntity.INPUT_SLOT).getCount()
-				!= inputCountBefore) {
-
-			blockEntity.resetProcessingState();
-		}
 
         return original;
     }

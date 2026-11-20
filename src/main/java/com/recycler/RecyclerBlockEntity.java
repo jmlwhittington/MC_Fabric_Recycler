@@ -349,14 +349,6 @@ public class RecyclerBlockEntity extends BlockEntity
         return processingTicks;
     }
 	
-	public void resetProcessingState() {
-		processingTicks = 0;
-		isProcessing = false;
-		inputRejected = false;
-		pendingRecovery = null;
-		setChanged();
-	}
-	
 	public boolean isInputRejected() {
 		return inputRejected;
 	}

@@ -11,6 +11,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.ItemStack;
 
 public final class ModBlocks {
     public static final Block RECYCLER = registerBlock(
@@ -19,6 +23,21 @@ public final class ModBlocks {
                     .strength(3.5F)
                     .requiresCorrectToolForDrops()
     );
+
+	public static final ResourceKey<CreativeModeTab> RECYCLER_TAB_KEY =
+			ResourceKey.create(
+					BuiltInRegistries.CREATIVE_MODE_TAB.key(),
+					RecyclerMod.id("recycler")
+			);
+
+	public static final CreativeModeTab RECYCLER_TAB =
+			FabricCreativeModeTab.builder()
+					.title(Component.translatable("itemGroup.recycler.recycler"))
+					.icon(() -> new ItemStack(RECYCLER))
+					.displayItems((parameters, output) -> {
+						output.accept(RECYCLER);
+					})
+					.build();
 
     public static final BlockEntityType<RecyclerBlockEntity> RECYCLER_BLOCK_ENTITY =
             Registry.register(
@@ -58,6 +77,11 @@ public final class ModBlocks {
         return block;
     }
 
-    public static void initialize() {
-    }
+	public static void initialize() {
+		Registry.register(
+				BuiltInRegistries.CREATIVE_MODE_TAB,
+				RECYCLER_TAB_KEY,
+				RECYCLER_TAB
+		);
+	}
 }

@@ -17,7 +17,6 @@ import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.resources.Identifier;
@@ -37,10 +36,6 @@ public final class RecyclerLogic {
     }
 	
 	private static boolean isProtectedInput(ItemStack input) {
-		if (input.getItem() instanceof DyeItem) {
-			return true;
-		}
-
 		if (!(input.getItem() instanceof BlockItem blockItem)
 				|| !(blockItem.getBlock() instanceof ShulkerBoxBlock)) {
 			return false;
@@ -95,7 +90,6 @@ public final class RecyclerLogic {
 
 		ItemStack representative = new ItemStack(plank.get());
 
-		// Every occupied recipe slot must accept this exact plank item.
 		for (Ingredient ingredient : ingredients) {
 			if (!ingredient.test(representative)) {
 				return Optional.empty();
@@ -202,11 +196,6 @@ public final class RecyclerLogic {
                 }
 
             } catch (RuntimeException exception) {
-                RecyclerMod.LOGGER.warn(
-                        "Recycler skipped invalid crafting recipe {} during eligibility check",
-                        holder.id(),
-                        exception
-                );
             }
         }
 
@@ -233,19 +222,6 @@ public final class RecyclerLogic {
                 RecoveryRule.getRecoveryResult(input);
 
 		if (specialResult.isPresent()) {
-			if (specialResult.get().isEmpty()) {
-				RecyclerMod.LOGGER.info(
-						"Recycler matched a special recovery rule for {}, "
-								+ "but recovered no items.",
-						BuiltInRegistries.ITEM.getKey(input.getItem())
-				);
-			} else {
-				RecyclerMod.LOGGER.info(
-						"Recycler matched a special recovery rule for {}.",
-						BuiltInRegistries.ITEM.getKey(input.getItem())
-				);
-			}
-
 			return specialResult;
 		}
 
@@ -283,13 +259,6 @@ public final class RecyclerLogic {
                     continue;
                 }
 
-                RecyclerMod.LOGGER.info(
-                        "Recycler found recipe {} for {} with output count {}.",
-                        holder.id(),
-                        BuiltInRegistries.ITEM.getKey(input.getItem()),
-                        result.getCount()
-                );
-
                 List<Ingredient> recipeIngredients =
                         craftingRecipe.placementInfo().ingredients();
 				
@@ -303,10 +272,6 @@ public final class RecyclerLogic {
 								result.getCount(),
 								recipeIngredients
 						).isEmpty()) {
-					RecyclerMod.LOGGER.info(
-							"Recycler skipped unsupported multi-output recipe {}.",
-							holder.id()
-					);
 
 					continue;
 				}
@@ -315,7 +280,6 @@ public final class RecyclerLogic {
 
 				if (result.getCount() == 1) {
 
-					// Keep the existing deterministic representative-ingredient behavior.
 					ingredients = new ArrayList<>(recipeIngredients.size());
 
 					boolean validIngredients = true;
@@ -391,10 +355,6 @@ public final class RecyclerLogic {
                 }
 
 				if (recoveredItems.isEmpty()) {
-					RecyclerMod.LOGGER.info(
-							"Recycler recovered no ingredients from recipe {}.",
-							holder.id()
-					);
 
 					return Optional.of(recoveredItems);
 				}
@@ -402,18 +362,8 @@ public final class RecyclerLogic {
                 return Optional.of(recoveredItems);
 
             } catch (RuntimeException exception) {
-                RecyclerMod.LOGGER.warn(
-                        "Recycler skipped invalid crafting recipe {}",
-                        holder.id(),
-                        exception
-                );
             }
         }
-
-        RecyclerMod.LOGGER.info(
-                "Recycler found no eligible single-output crafting recipe for {}.",
-                BuiltInRegistries.ITEM.getKey(input.getItem())
-        );
 
         return Optional.empty();
     }
