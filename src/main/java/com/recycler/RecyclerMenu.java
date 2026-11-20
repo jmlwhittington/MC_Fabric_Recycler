@@ -70,7 +70,7 @@ public class RecyclerMenu extends AbstractContainerMenu {
 						container,
 						slot,
 						116 + column * 18,
-						34 + row * 18
+						30 + row * 18
 				));
             }
         }
