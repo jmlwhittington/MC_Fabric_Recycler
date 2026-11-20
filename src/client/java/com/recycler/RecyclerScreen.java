@@ -50,39 +50,39 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
                 0xFF404040
         );
 
-        graphics.fill(
-                x + 56, y + 40,
-                x + 96, y + 48,
-                0xFF555555
-        );
+		graphics.fill(
+				x + 51, y + 41,
+				x + 91, y + 49,
+				0xFF555555
+		);
 
-        int progressWidth = Math.round(38 * this.menu.getProgress());
+		int progressWidth = Math.round(38 * this.menu.getProgress());
 
-        if (progressWidth > 0) {
-            graphics.fill(
-                    x + 57, y + 41,
-                    x + 57 + progressWidth, y + 47,
-                    0xFF55AA55
-            );
-        }
+		if (progressWidth > 0) {
+			graphics.fill(
+					x + 52, y + 42,
+					x + 52 + progressWidth, y + 48,
+					0xFF55AA55
+			);
+		}
 
-        graphics.outline(
-                x + 56, y + 40,
-                40, 8,
-                0xFF404040
-        );
+		graphics.outline(
+				x + 51, y + 41,
+				40, 8,
+				0xFF404040
+		);
 
-        drawSlot(graphics, x + 24, y + 38);
+		drawSlot(graphics, x + 24, y + 41);
 
-        for (int row = 0; row < 2; row++) {
-            for (int col = 0; col < 3; col++) {
-                drawSlot(
-                        graphics,
-                        x + 107 + col * 18,
-                        y + 31 + row * 18
-                );
-            }
-        }
+		for (int row = 0; row < 2; row++) {
+			for (int col = 0; col < 3; col++) {
+				drawSlot(
+						graphics,
+						x + 99 + col * 18,
+						y + 33 + row * 18
+				);
+			}
+		}
 
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -118,70 +118,70 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
         );
     }
 
-    @Override
-    protected void extractLabels(
-            GuiGraphicsExtractor graphics,
-            int mouseX,
-            int mouseY
-    ) {
-        int textColor = 0xFF404040;
+	@Override
+	protected void extractLabels(
+			GuiGraphicsExtractor graphics,
+			int mouseX,
+			int mouseY
+	) {
+		int textColor = 0xFF404040;
 
-        graphics.text(
-                this.font,
-                this.title,
-                this.titleLabelX,
-                this.titleLabelY,
-                textColor,
-                false
-        );
+		graphics.text(
+				this.font,
+				this.title,
+				this.titleLabelX,
+				this.titleLabelY,
+				textColor,
+				false
+		);
 
-        graphics.text(
-                this.font,
-                Component.translatable("container.inventory"),
-                8,
-                this.inventoryLabelY,
-                textColor,
-                false
-        );
+		graphics.text(
+				this.font,
+				Component.translatable("container.inventory"),
+				8,
+				this.inventoryLabelY,
+				textColor,
+				false
+		);
 
-        graphics.text(
-                this.font,
-                "Input",
-                20,
-                24,
-                textColor,
-                false
-        );
+		graphics.text(
+				this.font,
+				"Input",
+				20,
+				27,
+				textColor,
+				false
+		);
 
-        graphics.text(
-                this.font,
-                "Progress",
-                52,
-                31,
-                textColor,
-                false
-        );
+		graphics.text(
+				this.font,
+				"Progress",
+				47,
+				35,
+				textColor,
+				false
+		);
 
-        String outputLabel = "Output";
+		String outputLabel = "Output";
 
-        graphics.text(
-                this.font,
-                outputLabel,
-                98 + (54 - this.font.width(outputLabel)) / 2,
-                17,
-                textColor,
-                false
-        );
+		graphics.text(
+				this.font,
+				outputLabel,
+				80 + (54 - this.font.width(outputLabel)) / 2,
+				19,
+				textColor,
+				false
+		);
 
-        String status = this.menu.getStatusText();
+		String status = this.menu.getStatusText();
 
-        graphics.text(
-                this.font,
-                status,
-                57 + (40 - this.font.width(status)) / 2,
-                51,
-                textColor,
-                false
-        );
-    }
+		graphics.text(
+				this.font,
+				status,
+				53 + (40 - this.font.width(status)) / 2,
+				51,
+				textColor,
+				false
+		);
+	}
 }

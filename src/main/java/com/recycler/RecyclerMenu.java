@@ -63,7 +63,7 @@ public class RecyclerMenu extends AbstractContainerMenu {
 				container,
 				RecyclerBlockEntity.INPUT_SLOT,
 				24,
-				38
+				41
 		));
 
         for (int row = 0; row < 2; row++) {
@@ -74,8 +74,8 @@ public class RecyclerMenu extends AbstractContainerMenu {
 				addSlot(new Slot(
 						container,
 						slot,
-						107 + column * 18,
-						31 + row * 18
+						99 + column * 18,
+						33 + row * 18
 				));
             }
         }
