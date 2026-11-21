@@ -22,6 +22,8 @@ import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BundleContents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,9 +35,32 @@ import java.util.Random;
 public final class RecyclerLogic {
 
     private static final Random RANDOM = new Random();
+	
+	private static final TagKey<Item> STORAGE_BLOCKS =
+        TagKey.create(
+                Registries.ITEM,
+                Identifier.fromNamespaceAndPath("c", "storage_blocks")
+        );
 
     private RecyclerLogic() {
     }
+	
+	private static boolean isRecyclableCopperVariant(ItemStack input) {
+		String path = BuiltInRegistries.ITEM
+				.getKey(input.getItem())
+				.getPath();
+
+		return switch (path) {
+			case "exposed_copper",
+				 "weathered_copper",
+				 "oxidized_copper",
+				 "waxed_copper_block",
+				 "waxed_exposed_copper",
+				 "waxed_weathered_copper",
+				 "waxed_oxidized_copper" -> true;
+			default -> false;
+		};
+	}
 	
 	private static boolean isProtectedInput(ItemStack input) {
 		if (input.is(Items.STICK)
@@ -55,7 +80,16 @@ public final class RecyclerLogic {
 
 		if (path.equals("carpet")
 				|| path.endsWith("_carpet")
-				|| path.endsWith("_ingot")) {
+				|| path.endsWith("_ingot")
+				|| path.equals("bamboo_block")
+				|| path.equals("stripped_bamboo_block")
+				|| path.equals("quartz_block")
+				|| path.equals("amethyst_block")) {
+			return true;
+		}
+		
+		if (input.is(STORAGE_BLOCKS)
+				&& !isRecyclableCopperVariant(input)) {
 			return true;
 		}
 		
@@ -262,12 +296,52 @@ public final class RecyclerLogic {
 		return getBedIngredients(item);
 	}
 	
+	private static Item getCopperBaseItem(Item item) {
+		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
+		String path = inputId.getPath();
+
+		if (path.startsWith("waxed_")) {
+			path = path.substring("waxed_".length());
+		}
+
+		boolean oxidizedCopperBlock =
+				path.equals("copper")
+				|| path.equals("exposed_copper")
+				|| path.equals("weathered_copper")
+				|| path.equals("oxidized_copper");
+
+		if (oxidizedCopperBlock) {
+			return BuiltInRegistries.ITEM.getValue(
+					Identifier.withDefaultNamespace("copper_block")
+			);
+		}
+
+		if (path.startsWith("exposed_")) {
+			path = path.substring("exposed_".length());
+		} else if (path.startsWith("weathered_")) {
+			path = path.substring("weathered_".length());
+		} else if (path.startsWith("oxidized_")) {
+			path = path.substring("oxidized_".length());
+		}
+
+		if (!path.contains("copper")) {
+			return item;
+		}
+
+		Identifier baseId = Identifier.fromNamespaceAndPath(
+				inputId.getNamespace(),
+				path
+		);
+
+		return BuiltInRegistries.ITEM.getOptional(baseId).orElse(item);
+	}
+
 	private static Item getRecipeLookupItem(ItemStack input) {
 		Item item = input.getItem();
 
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
-		
+
 		if (isDyedShulkerBox(input)) {
 			return Items.SHULKER_BOX;
 		}
@@ -282,19 +356,7 @@ public final class RecyclerLogic {
 					.orElse(item);
 		}
 
-		if (path.equals("copper_chest")
-				|| path.endsWith("_copper_chest")) {
-
-			Identifier normalId = Identifier.fromNamespaceAndPath(
-					inputId.getNamespace(),
-					"copper_chest"
-			);
-
-			return BuiltInRegistries.ITEM.getOptional(normalId)
-					.orElse(item);
-		}
-
-		return item;
+		return getCopperBaseItem(item);
 	}
 	
 	private static List<ItemStack> rollRecovery(List<ItemStack> ingredients) {
@@ -318,44 +380,73 @@ public final class RecyclerLogic {
 		return recoveredItems;
 	}
 	
-	private static Optional<Item> getSupportedMultiOutputPlank(
-        Item inputItem,
-        int outputCount,
-        List<Ingredient> ingredients
+	private static Optional<Item> getSupportedMultiOutputIngredient(
+			Item inputItem,
+			int outputCount,
+			List<Ingredient> ingredients
 	) {
-		Identifier inputId = BuiltInRegistries.ITEM.getKey(inputItem);
+		Item lookupItem = getCopperBaseItem(inputItem);
+
+		Identifier inputId = BuiltInRegistries.ITEM.getKey(lookupItem);
 		String path = inputId.getPath();
 
+		Item expectedIngredient;
 		int expectedOutputCount;
+		int expectedIngredientCount;
 
-		if (path.endsWith("_door")) {
+		if (path.equals("copper_door")) {
+			expectedIngredient = Items.COPPER_INGOT;
 			expectedOutputCount = 3;
-		} else if (path.endsWith("_trapdoor")) {
+			expectedIngredientCount = 6;
+
+		} else if (path.equals("copper_trapdoor")) {
+			expectedIngredient = Items.COPPER_INGOT;
 			expectedOutputCount = 2;
+			expectedIngredientCount = 6;
+
+		} else if (path.equals("copper_grate")
+				|| path.equals("cut_copper")) {
+			expectedIngredient = Items.COPPER_BLOCK;
+			expectedOutputCount = 4;
+			expectedIngredientCount = 4;
+
 		} else {
-			return Optional.empty();
+			if (path.endsWith("_door")) {
+				expectedOutputCount = 3;
+			} else if (path.endsWith("_trapdoor")) {
+				expectedOutputCount = 2;
+			} else {
+				return Optional.empty();
+			}
+
+			String woodName = path.substring(
+					0,
+					path.lastIndexOf('_')
+			);
+
+			Identifier plankId = Identifier.fromNamespaceAndPath(
+					inputId.getNamespace(),
+					woodName + "_planks"
+			);
+
+			Optional<Item> plank =
+					BuiltInRegistries.ITEM.getOptional(plankId);
+
+			if (plank.isEmpty()) {
+				return Optional.empty();
+			}
+
+			expectedIngredient = plank.get();
+			expectedIngredientCount = 6;
 		}
 
 		if (outputCount != expectedOutputCount
-				|| ingredients.size() != 6
+				|| ingredients.size() != expectedIngredientCount
 				|| ingredients.size() % outputCount != 0) {
 			return Optional.empty();
 		}
 
-		String woodName = path.substring(0, path.lastIndexOf('_'));
-
-		Identifier plankId = Identifier.fromNamespaceAndPath(
-				inputId.getNamespace(),
-				woodName + "_planks"
-		);
-
-		Optional<Item> plank = BuiltInRegistries.ITEM.getOptional(plankId);
-
-		if (plank.isEmpty()) {
-			return Optional.empty();
-		}
-
-		ItemStack representative = new ItemStack(plank.get());
+		ItemStack representative = new ItemStack(expectedIngredient);
 
 		for (Ingredient ingredient : ingredients) {
 			if (!ingredient.test(representative)) {
@@ -363,7 +454,7 @@ public final class RecyclerLogic {
 			}
 		}
 
-		return plank;
+		return Optional.of(expectedIngredient);
 	}
 
     public static boolean canRecycleInput(Level level, ItemStack input) {
@@ -432,7 +523,7 @@ public final class RecyclerLogic {
                         craftingRecipe.placementInfo().ingredients();
 				
 				if (result.getCount() != 1
-						&& getSupportedMultiOutputPlank(
+						&& getSupportedMultiOutputIngredient(
 								input.getItem(),
 								result.getCount(),
 								ingredients
@@ -563,7 +654,7 @@ public final class RecyclerLogic {
 				}
 
 				if (result.getCount() != 1
-						&& getSupportedMultiOutputPlank(
+						&& getSupportedMultiOutputIngredient(
 								input.getItem(),
 								result.getCount(),
 								recipeIngredients
@@ -611,27 +702,27 @@ public final class RecyclerLogic {
 						continue;
 					}
 
-				} else {
+					} else {
 
-					Optional<Item> plank = getSupportedMultiOutputPlank(
-							input.getItem(),
-							result.getCount(),
-							recipeIngredients
-					);
+						Optional<Item> recoveredIngredient =
+								getSupportedMultiOutputIngredient(
+										input.getItem(),
+										result.getCount(),
+										recipeIngredients
+								);
 
-					if (plank.isEmpty()) {
-						continue;
+						if (recoveredIngredient.isEmpty()) {
+							continue;
+						}
+
+						int ingredientCost =
+								recipeIngredients.size() / result.getCount();
+
+						ingredients = createIngredients(
+								recoveredIngredient.get(),
+								ingredientCost
+						);
 					}
-
-					int ingredientCost =
-							recipeIngredients.size() / result.getCount();
-
-					ingredients = new ArrayList<>(ingredientCost);
-
-					for (int i = 0; i < ingredientCost; i++) {
-						ingredients.add(new ItemStack(plank.get()));
-					}
-				}
 
 				return Optional.of(rollRecovery(ingredients));
 
