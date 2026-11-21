@@ -31,7 +31,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: recycler-build
-          path: |
-              build/libs/*.jar
-              !build/libs/*-sources.jar
+          path: build/libs/*.jar
           if-no-files-found: error
+          compression-level: 0

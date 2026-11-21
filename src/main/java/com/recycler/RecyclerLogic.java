@@ -68,7 +68,15 @@ public final class RecyclerLogic {
 				|| path.equals("stripped_bamboo_block")
 				|| path.equals("quartz_block")
 				|| path.equals("amethyst_block")
-				|| (input.is(STORAGE_BLOCKS))) {
+				|| input.is(STORAGE_BLOCKS)
+				|| path.equals("copper_block")
+				|| path.equals("exposed_copper")
+				|| path.equals("weathered_copper")
+				|| path.equals("oxidized_copper")
+				|| path.equals("waxed_copper_block")
+				|| path.equals("waxed_exposed_copper")
+				|| path.equals("waxed_weathered_copper")
+				|| path.equals("waxed_oxidized_copper")) {
 			return true;
 		}
 		
