@@ -192,7 +192,7 @@ public class RecyclerMod implements ModInitializer {
 
 				String outputName =
 						net.minecraft.network.chat.Component
-								.translatable(stack.getDescriptionId())
+								.translatable(stack.getItem().getDescriptionId())
 								.getString();
 
 				report.append("  ")
