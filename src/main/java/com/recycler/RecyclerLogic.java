@@ -76,7 +76,8 @@ public final class RecyclerLogic {
 				|| path.equals("waxed_copper_block")
 				|| path.equals("waxed_exposed_copper")
 				|| path.equals("waxed_weathered_copper")
-				|| path.equals("waxed_oxidized_copper")) {
+				|| path.equals("waxed_oxidized_copper")
+				|| path.equals("granite")) {
 			return true;
 		}
 		
@@ -156,6 +157,7 @@ public final class RecyclerLogic {
 		return ingredients;
 	}
 
+
 	private static Optional<List<ItemStack>> getSpecialIngredients(
 			ItemStack input
 	) {
@@ -163,30 +165,70 @@ public final class RecyclerLogic {
 
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
-		
+
 		if (item == Items.TARGET) {
 			return Optional.of(
 					createIngredients(Items.HAY_BLOCK, 1)
 			);
 		}
-		
-		if (path.equals("copper_bulb")
-				|| path.endsWith("_copper_bulb")) {
 
-			List<ItemStack> ingredients = new ArrayList<>();
-
-			ingredients.addAll(
-					createIngredients(
-							BuiltInRegistries.ITEM.getValue(
-									Identifier.withDefaultNamespace("copper_block")
-							),
-							3
-					)
+		if (path.equals("dark_prismarine")) {
+			return Optional.of(
+					createIngredients(Items.PRISMARINE_SHARD, 8)
 			);
-			ingredients.add(new ItemStack(Items.BLAZE_ROD));
-			ingredients.add(new ItemStack(Items.REDSTONE));
+		}
 
-			return Optional.of(ingredients);
+		if (path.equals("mossy_stone_bricks")
+				|| path.equals("mossy_cobblestone")) {
+			return Optional.of(
+					createIngredients(Items.VINE, 1)
+			);
+		}
+
+		if (path.equals("red_nether_bricks")) {
+			return Optional.of(
+					createIngredients(Items.NETHER_BRICK, 2)
+			);
+		}
+
+		if (path.startsWith("infested_")) {
+			String replacementPath =
+					path.substring("infested_".length());
+
+			Identifier replacementId =
+					Identifier.fromNamespaceAndPath(
+							inputId.getNamespace(),
+							replacementPath
+					);
+
+			Optional<Item> replacement =
+					BuiltInRegistries.ITEM.getOptional(replacementId);
+
+			if (replacement.isPresent()) {
+				return Optional.of(
+						createIngredients(replacement.get(), 1)
+				);
+			}
+		}
+
+		if (path.startsWith("cracked_")) {
+			String replacementPath =
+					path.substring("cracked_".length());
+
+			Identifier replacementId =
+					Identifier.fromNamespaceAndPath(
+							inputId.getNamespace(),
+							replacementPath
+					);
+
+			Optional<Item> replacement =
+					BuiltInRegistries.ITEM.getOptional(replacementId);
+
+			if (replacement.isPresent()) {
+				return Optional.of(
+						createIngredients(replacement.get(), 1)
+				);
+			}
 		}
 
 		if (item == Items.LEAD) {
@@ -367,83 +409,77 @@ public final class RecyclerLogic {
 		return recoveredItems;
 	}
 	
-	private static Optional<Item> getSupportedMultiOutputIngredient(
+
+	private static Optional<List<ItemStack>> getMultiOutputIngredients(
 			Item inputItem,
 			int outputCount,
 			List<Ingredient> ingredients
 	) {
-		Item lookupItem = getCopperBaseItem(inputItem);
-
-		Identifier inputId = BuiltInRegistries.ITEM.getKey(lookupItem);
-		String path = inputId.getPath();
-
-		Item expectedIngredient;
-		int expectedOutputCount;
-		int expectedIngredientCount;
-
-		if (path.equals("copper_door")) {
-			expectedIngredient = Items.COPPER_INGOT;
-			expectedOutputCount = 3;
-			expectedIngredientCount = 6;
-
-		} else if (path.equals("copper_trapdoor")) {
-			expectedIngredient = Items.COPPER_INGOT;
-			expectedOutputCount = 2;
-			expectedIngredientCount = 6;
-
-		} else if (path.equals("copper_grate")
-				|| path.equals("cut_copper")) {
-			expectedIngredient = BuiltInRegistries.ITEM.getValue(
-					Identifier.withDefaultNamespace("copper_block")
-			);
-			expectedOutputCount = 4;
-			expectedIngredientCount = 4;
-
-		} else {
-			if (path.endsWith("_door")) {
-				expectedOutputCount = 3;
-			} else if (path.endsWith("_trapdoor")) {
-				expectedOutputCount = 2;
-			} else {
-				return Optional.empty();
-			}
-
-			String woodName = path.substring(
-					0,
-					path.lastIndexOf('_')
-			);
-
-			Identifier plankId = Identifier.fromNamespaceAndPath(
-					inputId.getNamespace(),
-					woodName + "_planks"
-			);
-
-			Optional<Item> plank =
-					BuiltInRegistries.ITEM.getOptional(plankId);
-
-			if (plank.isEmpty()) {
-				return Optional.empty();
-			}
-
-			expectedIngredient = plank.get();
-			expectedIngredientCount = 6;
-		}
-
-		if (outputCount != expectedOutputCount
-				|| ingredients.size() != expectedIngredientCount
+		if (outputCount <= 1
+				|| ingredients.isEmpty()
 				|| ingredients.size() % outputCount != 0) {
 			return Optional.empty();
 		}
 
-		ItemStack representative = new ItemStack(expectedIngredient);
+		Item lookupItem = getCopperBaseItem(inputItem);
 
-		for (Ingredient ingredient : ingredients) {
-			if (!ingredient.test(representative)) {
+		String path =
+				BuiltInRegistries.ITEM.getKey(lookupItem).getPath();
+
+		if (path.equals("copper_grate")
+				|| path.equals("cut_copper")) {
+
+			if (outputCount != 4 || ingredients.size() != 4) {
 				return Optional.empty();
 			}
 		}
 
-		return Optional.of(expectedIngredient);
+		if (path.equals("copper_trapdoor")) {
+			if (outputCount != 2 || ingredients.size() != 6) {
+				return Optional.empty();
+			}
+		}
+
+		Optional<Holder<Item>> representative =
+				ingredients.get(0).items()
+						.sorted(
+								Comparator.comparing(itemHolder ->
+										BuiltInRegistries.ITEM
+												.getKey(itemHolder.value())
+												.toString()
+								)
+						)
+						.filter(itemHolder -> {
+							ItemStack stack =
+									new ItemStack(itemHolder.value());
+
+							for (Ingredient ingredient : ingredients) {
+								if (!ingredient.test(stack)) {
+									return false;
+								}
+							}
+
+							return true;
+						})
+						.findFirst();
+
+		if (representative.isEmpty()) {
+			return Optional.empty();
+		}
+
+		int ingredientCost =
+				ingredients.size() / outputCount;
+
+		if (path.equals("copper_trapdoor")) {
+			ingredientCost = 4;
+		}
+
+		return Optional.of(
+				createIngredients(
+						representative.get().value(),
+						ingredientCost
+				)
+		);
 	}
 
     public static boolean canRecycleInput(Level level, ItemStack input) {
@@ -512,15 +548,16 @@ public final class RecyclerLogic {
                         craftingRecipe.placementInfo().ingredients();
 				
 				if (result.getCount() != 1
-						&& getSupportedMultiOutputIngredient(
+						&& getMultiOutputIngredients(
 								input.getItem(),
 								result.getCount(),
 								ingredients
 						).isEmpty()) {
 					continue;
 				}
-				
-				if (ingredients.size() <= 1) {
+
+				if (result.getCount() == 1
+						&& ingredients.size() <= 1) {
 					continue;
 				}
 
@@ -643,7 +680,7 @@ public final class RecyclerLogic {
 				}
 
 				if (result.getCount() != 1
-						&& getSupportedMultiOutputIngredient(
+						&& getMultiOutputIngredients(
 								input.getItem(),
 								result.getCount(),
 								recipeIngredients
@@ -693,24 +730,18 @@ public final class RecyclerLogic {
 
 					} else {
 
-						Optional<Item> recoveredIngredient =
-								getSupportedMultiOutputIngredient(
+						Optional<List<ItemStack>> multiOutputIngredients =
+								getMultiOutputIngredients(
 										input.getItem(),
 										result.getCount(),
 										recipeIngredients
 								);
 
-						if (recoveredIngredient.isEmpty()) {
+						if (multiOutputIngredients.isEmpty()) {
 							continue;
 						}
 
-						int ingredientCost =
-								recipeIngredients.size() / result.getCount();
-
-						ingredients = createIngredients(
-								recoveredIngredient.get(),
-								ingredientCost
-						);
+						ingredients = multiOutputIngredients.get();
 					}
 
 				return Optional.of(rollRecovery(ingredients));
