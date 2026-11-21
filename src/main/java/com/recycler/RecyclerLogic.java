@@ -406,7 +406,9 @@ public final class RecyclerLogic {
 
 		} else if (path.equals("copper_grate")
 				|| path.equals("cut_copper")) {
-			expectedIngredient = Items.COPPER_BLOCK;
+			expectedIngredient = BuiltInRegistries.ITEM.getValue(
+					Identifier.withDefaultNamespace("copper_block")
+			);
 			expectedOutputCount = 4;
 			expectedIngredientCount = 4;
 
