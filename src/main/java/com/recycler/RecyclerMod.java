@@ -253,11 +253,10 @@ public class RecyclerMod implements ModInitializer {
 				.getGameDir()
 				.resolve("recycler_item_report.txt");
 
-		try {
-			final int completedItemCount = totalItems;
+		final int completedItemCount = totalItems;
 
-			try {
-				Files.writeString(reportPath, report.toString());
+		try {
+			Files.writeString(reportPath, report.toString());
 
 			source.sendSuccess(
 					() -> net.minecraft.network.chat.Component.literal(
@@ -281,7 +280,6 @@ public class RecyclerMod implements ModInitializer {
 
 			return 0;
 		}
-	}
 
     public static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(MOD_ID, path);
