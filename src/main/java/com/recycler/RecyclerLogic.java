@@ -45,23 +45,6 @@ public final class RecyclerLogic {
     private RecyclerLogic() {
     }
 	
-	private static boolean isRecyclableCopperVariant(ItemStack input) {
-		String path = BuiltInRegistries.ITEM
-				.getKey(input.getItem())
-				.getPath();
-
-		return switch (path) {
-			case "exposed_copper",
-				 "weathered_copper",
-				 "oxidized_copper",
-				 "waxed_copper_block",
-				 "waxed_exposed_copper",
-				 "waxed_weathered_copper",
-				 "waxed_oxidized_copper" -> true;
-			default -> false;
-		};
-	}
-	
 	private static boolean isProtectedInput(ItemStack input) {
 		if (input.is(Items.STICK)
 				|| input.is(Items.LEATHER)) {
@@ -84,12 +67,8 @@ public final class RecyclerLogic {
 				|| path.equals("bamboo_block")
 				|| path.equals("stripped_bamboo_block")
 				|| path.equals("quartz_block")
-				|| path.equals("amethyst_block")) {
-			return true;
-		}
-		
-		if (input.is(STORAGE_BLOCKS)
-				&& !isRecyclableCopperVariant(input)) {
+				|| path.equals("amethyst_block")
+				|| (input.is(STORAGE_BLOCKS))) {
 			return true;
 		}
 		
