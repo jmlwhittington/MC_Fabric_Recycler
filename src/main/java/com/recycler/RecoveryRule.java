@@ -48,6 +48,11 @@ public final class RecoveryRule {
     private RecoveryRule() {
     }
 
+	public record PotentialRuleOutput(
+			ItemStack stack,
+			double chance
+	) {}
+
     private record OutputRule(Item item, int count, double chance) {
     }
 
@@ -332,6 +337,62 @@ public final class RecoveryRule {
 		}
 
 		return false;
+	}
+
+	public static Optional<List<PotentialRuleOutput>> getPotentialRecoveryResult(
+			ItemStack input
+	) {
+		if (input == null || input.isEmpty()) {
+			return Optional.empty();
+		}
+
+		Identifier inputId =
+				BuiltInRegistries.ITEM.getKey(input.getItem());
+
+		List<OutputRule> exactRules = itemRules.get(inputId);
+
+		if (exactRules != null) {
+			return Optional.of(convertPotentialOutputs(exactRules));
+		}
+
+		for (Map.Entry<Identifier, Map<Identifier, List<OutputRule>>> entry
+				: tagRules.entrySet()) {
+
+			TagKey<Item> tag = TagKey.create(
+					Registries.ITEM,
+					entry.getKey()
+			);
+
+			if (!input.is(tag)) {
+				continue;
+			}
+
+			List<OutputRule> outputs =
+					entry.getValue().get(inputId);
+
+			if (outputs != null) {
+				return Optional.of(convertPotentialOutputs(outputs));
+			}
+		}
+
+		return Optional.empty();
+	}
+
+	private static List<PotentialRuleOutput> convertPotentialOutputs(
+			List<OutputRule> rules
+	) {
+		List<PotentialRuleOutput> results = new ArrayList<>();
+
+		for (OutputRule rule : rules) {
+			results.add(
+					new PotentialRuleOutput(
+							new ItemStack(rule.item(), rule.count()),
+							rule.chance()
+					)
+			);
+		}
+
+		return results;
 	}
 
     public static Optional<List<ItemStack>> getRecoveryResult(

@@ -1,14 +1,23 @@
-
 package com.recycler;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import com.mojang.brigadier.Command;
 import net.minecraft.resources.Identifier;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import com.mojang.brigadier.Command;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Locale;
+import java.util.Optional;
 
 public class RecyclerMod implements ModInitializer {
 
@@ -60,9 +69,218 @@ public class RecyclerMod implements ModInitializer {
 														return 0;
 													})
 									)
+									.then(
+											Commands.literal("dump")
+													.executes(context ->
+															generateItemReport(
+																	context.getSource().getServer(),
+																	context.getSource()
+															)
+													)
+									)
 					);
 				}
 		);
+	}
+	
+	private static int generateItemReport(
+			net.minecraft.server.MinecraftServer server,
+			net.minecraft.commands.CommandSourceStack source
+	) {
+		Level level = server.overworld();
+
+		StringBuilder report = new StringBuilder();
+
+		int totalItems = 0;
+		int recyclableItems = 0;
+		int unrecyclableItems = 0;
+		int protectedItems = 0;
+		int specialRuleItems = 0;
+		int specialHandlingItems = 0;
+		int recipeItems = 0;
+
+		report.append("==================================================\n");
+		report.append("RECYCLER ITEM AUDIT\n");
+		report.append("==================================================\n\n");
+
+		report.append("Minecraft Version: 26.3\n");
+		report.append("Mod: Recycler\n\n");
+
+		for (Item item : BuiltInRegistries.ITEM) {
+			totalItems++;
+
+			ItemStack input = new ItemStack(item);
+
+			var itemId = BuiltInRegistries.ITEM.getKey(item);
+
+			String itemName =
+					net.minecraft.network.chat.Component
+							.translatable(item.getDescriptionId())
+							.getString();
+
+			report.append("ITEM: ")
+					.append(itemId)
+					.append("\n");
+
+			report.append("NAME: ")
+					.append(itemName)
+					.append("\n");
+
+			// Protected items are reported separately.
+			if (RecyclerLogic.isProtectedInputForAudit(input)) {
+				protectedItems++;
+
+				report.append("STATUS: PROTECTED\n");
+				report.append("REASON: Protected input\n");
+				report.append("\n--------------------------------------------------\n\n");
+
+				continue;
+			}
+
+			// Determine the recovery source.
+			boolean hasRule =
+					RecoveryRule.hasApplicableRule(input);
+
+			boolean hasSpecialHandling =
+					RecyclerLogic.isSpecialIngredientsForAudit(input);
+
+			Optional<java.util.List<RecyclerLogic.PotentialOutput>> outputs =
+					RecyclerLogic.getPotentialOutputs(level, input);
+
+			if (outputs.isEmpty()) {
+				unrecyclableItems++;
+
+				report.append("STATUS: UNRECYCLABLE\n");
+
+				report.append(
+						"REASON: No applicable recovery rule or valid crafting recipe\n"
+				);
+
+				report.append("\n--------------------------------------------------\n\n");
+
+				continue;
+			}
+
+			recyclableItems++;
+
+			String sourceType;
+
+			if (hasRule) {
+				sourceType = "SPECIAL ITEM/TAG RULE";
+				specialRuleItems++;
+			} else if (hasSpecialHandling) {
+				sourceType = "SPECIAL HANDLING";
+				specialHandlingItems++;
+			} else {
+				sourceType = "CRAFTING RECIPE";
+				recipeItems++;
+			}
+
+			report.append("STATUS: RECYCLABLE\n");
+			report.append("SOURCE: ")
+					.append(sourceType)
+					.append("\n");
+
+			report.append("\nPOTENTIAL RECOVERY:\n");
+
+			if (outputs.get().isEmpty()) {
+				report.append("  No outputs (all configured chances may be 0%)\n");
+			}
+
+			for (RecyclerLogic.PotentialOutput output : outputs.get()) {
+				ItemStack stack = output.stack();
+
+				String outputName =
+						net.minecraft.network.chat.Component
+								.translatable(stack.getDescriptionId())
+								.getString();
+
+				report.append("  ")
+						.append(outputName)
+						.append(" [")
+						.append(BuiltInRegistries.ITEM.getKey(stack.getItem()))
+						.append("] x")
+						.append(stack.getCount())
+						.append(" - ")
+						.append(String.format(
+								Locale.ROOT,
+								"%.1f",
+								output.chance()
+						))
+						.append("%\n");
+			}
+
+			report.append("\n--------------------------------------------------\n\n");
+		}
+
+		report.append("==================================================\n");
+		report.append("AUDIT SUMMARY\n");
+		report.append("==================================================\n\n");
+
+		report.append("Total Items Tested: ")
+				.append(totalItems)
+				.append("\n");
+
+		report.append("Recyclable Items: ")
+				.append(recyclableItems)
+				.append("\n");
+
+		report.append("Unrecyclable Items: ")
+				.append(unrecyclableItems)
+				.append("\n");
+
+		report.append("Protected Items: ")
+				.append(protectedItems)
+				.append("\n\n");
+
+		report.append("SPECIAL ITEM/TAG RULES: ")
+				.append(specialRuleItems)
+				.append("\n");
+
+		report.append("SPECIAL HANDLING: ")
+				.append(specialHandlingItems)
+				.append("\n");
+
+		report.append("NORMAL CRAFTING RECIPES: ")
+				.append(recipeItems)
+				.append("\n\n");
+
+		report.append("==================================================\n");
+		report.append("AUDIT COMPLETE\n");
+		report.append("==================================================\n");
+
+		Path reportPath = FabricLoader.getInstance()
+				.getGameDir()
+				.resolve("recycler_item_report.txt");
+
+		try {
+			final int completedItemCount = totalItems;
+
+			try {
+				Files.writeString(reportPath, report.toString());
+
+			source.sendSuccess(
+					() -> net.minecraft.network.chat.Component.literal(
+							"Recycler audit complete! Tested "
+									+ completedItemCount
+									+ " items. Report saved to: "
+									+ reportPath.toAbsolutePath()
+					),
+					true
+			);
+
+			return com.mojang.brigadier.Command.SINGLE_SUCCESS;
+
+		} catch (IOException exception) {
+			source.sendFailure(
+					net.minecraft.network.chat.Component.literal(
+							"Failed to write Recycler item report: "
+									+ exception.getMessage()
+					)
+			);
+
+			return 0;
+		}
 	}
 
     public static Identifier id(String path) {

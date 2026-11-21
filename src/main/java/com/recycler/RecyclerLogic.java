@@ -24,6 +24,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,6 +35,11 @@ import java.util.Optional;
 import java.util.Random;
 
 public final class RecyclerLogic {
+
+	public record PotentialOutput(
+			ItemStack stack,
+			double chance
+	) {}
 
     private static final Random RANDOM = new Random();
 	
@@ -147,6 +154,28 @@ public final class RecyclerLogic {
 		return Optional.of(ingredients);
 	}
 	
+	private static Optional<Item> getCrackedBaseItem(ItemStack input) {
+		Identifier inputId =
+				BuiltInRegistries.ITEM.getKey(input.getItem());
+
+		String path = inputId.getPath();
+
+		if (!path.startsWith("cracked_")) {
+			return Optional.empty();
+		}
+
+		String replacementPath =
+				path.substring("cracked_".length());
+
+		Identifier replacementId =
+				Identifier.fromNamespaceAndPath(
+						inputId.getNamespace(),
+						replacementPath
+				);
+
+		return BuiltInRegistries.ITEM.getOptional(replacementId);
+	}
+	
 	private static List<ItemStack> createIngredients(Item item, int count) {
 		List<ItemStack> ingredients = new ArrayList<>();
 
@@ -171,6 +200,12 @@ public final class RecyclerLogic {
 					createIngredients(Items.HAY_BLOCK, 1)
 			);
 		}
+		
+		if (item == Items.PACKED_MUD) {
+			return Optional.of(
+					createIngredients(Items.MUD, 1)
+			);
+		}
 
 		if (path.equals("dark_prismarine")) {
 			return Optional.of(
@@ -178,57 +213,28 @@ public final class RecyclerLogic {
 			);
 		}
 
-		if (path.equals("mossy_stone_bricks")
-				|| path.equals("mossy_cobblestone")) {
-			return Optional.of(
-					createIngredients(Items.VINE, 1)
-			);
+		if (path.equals("mossy_stone_bricks")) {
+			List<ItemStack> ingredients = new ArrayList<>();
+
+			ingredients.add(new ItemStack(Items.STONE_BRICKS));
+			ingredients.add(new ItemStack(Items.VINE));
+
+			return Optional.of(ingredients);
+		}
+
+		if (path.equals("mossy_cobblestone")) {
+			List<ItemStack> ingredients = new ArrayList<>();
+
+			ingredients.add(new ItemStack(Items.COBBLESTONE));
+			ingredients.add(new ItemStack(Items.VINE));
+
+			return Optional.of(ingredients);
 		}
 
 		if (path.equals("red_nether_bricks")) {
 			return Optional.of(
 					createIngredients(Items.NETHER_BRICK, 2)
 			);
-		}
-
-		if (path.startsWith("infested_")) {
-			String replacementPath =
-					path.substring("infested_".length());
-
-			Identifier replacementId =
-					Identifier.fromNamespaceAndPath(
-							inputId.getNamespace(),
-							replacementPath
-					);
-
-			Optional<Item> replacement =
-					BuiltInRegistries.ITEM.getOptional(replacementId);
-
-			if (replacement.isPresent()) {
-				return Optional.of(
-						createIngredients(replacement.get(), 1)
-				);
-			}
-		}
-
-		if (path.startsWith("cracked_")) {
-			String replacementPath =
-					path.substring("cracked_".length());
-
-			Identifier replacementId =
-					Identifier.fromNamespaceAndPath(
-							inputId.getNamespace(),
-							replacementPath
-					);
-
-			Optional<Item> replacement =
-					BuiltInRegistries.ITEM.getOptional(replacementId);
-
-			if (replacement.isPresent()) {
-				return Optional.of(
-						createIngredients(replacement.get(), 1)
-				);
-			}
 		}
 
 		if (item == Items.LEAD) {
@@ -499,6 +505,15 @@ public final class RecyclerLogic {
             return true;
         }
 		
+		Optional<Item> crackedBase = getCrackedBaseItem(input);
+
+		if (crackedBase.isPresent()) {
+			return canRecycleInput(
+					level,
+					new ItemStack(crackedBase.get())
+			);
+		}
+		
 		if (getSpecialIngredients(input).isPresent()) {
 			return true;
 		}
@@ -618,6 +633,15 @@ public final class RecyclerLogic {
 
 		if (specialResult.isPresent()) {
 			return specialResult;
+		}
+		
+		Optional<Item> crackedBase = getCrackedBaseItem(input);
+
+		if (crackedBase.isPresent()) {
+			return recoverIngredients(
+					level,
+					new ItemStack(crackedBase.get())
+			);
 		}
 		
 		Optional<List<ItemStack>> specialIngredients =
@@ -752,6 +776,187 @@ public final class RecyclerLogic {
 
         return Optional.empty();
     }
+
+public static boolean isProtectedInputForAudit(ItemStack input) {
+    return isProtectedInput(input);
+}
+
+public static boolean isSpecialIngredientsForAudit(ItemStack input) {
+    return getSpecialIngredients(input).isPresent();
+}
+
+public static Optional<List<PotentialOutput>> getPotentialOutputs(
+        Level level,
+        ItemStack input
+) {
+    if (level == null
+            || level.isClientSide()
+            || level.getServer() == null
+            || input == null
+            || input.isEmpty()
+            || isProtectedInput(input)) {
+        return Optional.empty();
+    }
+
+    // Exact item and tag rules take priority over normal recovery.
+    Optional<List<RecoveryRule.PotentialRuleOutput>> ruleResults =
+            RecoveryRule.getPotentialRecoveryResult(input);
+
+    if (ruleResults.isPresent()) {
+        List<PotentialOutput> outputs = new ArrayList<>();
+
+        for (RecoveryRule.PotentialRuleOutput result : ruleResults.get()) {
+            outputs.add(
+                    new PotentialOutput(
+                            result.stack().copy(),
+                            result.chance()
+                    )
+            );
+        }
+
+        return Optional.of(outputs);
+    }
+
+    // Handle special recovery cases such as wool, beds,
+    // cracked blocks, copper-related handling, and others.
+    Optional<List<ItemStack>> specialIngredients =
+            getSpecialIngredients(input);
+
+    if (specialIngredients.isPresent()) {
+        return Optional.of(
+                calculatePotentialOutputs(specialIngredients.get())
+        );
+    }
+
+    Item recipeInput = getRecipeLookupItem(input);
+
+    List<RecipeHolder<?>> recipes = new ArrayList<>(
+            level.getServer().getRecipeManager().getRecipes()
+    );
+
+    recipes.sort(
+            Comparator.comparing(
+                    recipeHolder ->
+                            recipeHolder.id().identifier().toString()
+            )
+    );
+
+    for (RecipeHolder<?> holder : recipes) {
+        Recipe<?> recipe = holder.value();
+
+        if (recipe.getClass() != ShapedRecipe.class
+                && recipe.getClass() != ShapelessRecipe.class) {
+            continue;
+        }
+
+        if (recipe.getType() != RecipeType.CRAFTING) {
+            continue;
+        }
+
+        try {
+            ItemStack result = getStaticResult(recipe);
+
+            if (result.isEmpty()
+                    || result.getItem() != recipeInput) {
+                continue;
+            }
+
+            NormalCraftingRecipe craftingRecipe =
+                    (NormalCraftingRecipe) recipe;
+
+            List<Ingredient> recipeIngredients =
+                    craftingRecipe.placementInfo().ingredients();
+
+            if (recipeIngredients.size() <= 1) {
+                continue;
+            }
+
+            List<ItemStack> ingredients;
+
+            if (result.getCount() == 1) {
+                ingredients = new ArrayList<>(recipeIngredients.size());
+
+                boolean validIngredients = true;
+
+                for (Ingredient ingredient : recipeIngredients) {
+                    Optional<Holder<Item>> representative =
+                            ingredient.items()
+                                    .sorted(
+                                            Comparator.comparing(itemHolder ->
+                                                    BuiltInRegistries.ITEM
+                                                            .getKey(itemHolder.value())
+                                                            .toString()
+                                            )
+                                    )
+                                    .filter(itemHolder ->
+                                            ingredient.test(
+                                                    new ItemStack(itemHolder.value())
+                                            )
+                                    )
+                                    .findFirst();
+
+                    if (representative.isEmpty()) {
+                        validIngredients = false;
+                        break;
+                    }
+
+                    ingredients.add(
+                            new ItemStack(representative.get().value())
+                    );
+                }
+
+                if (!validIngredients) {
+                    continue;
+                }
+
+            } else {
+                Optional<List<ItemStack>> multiOutputIngredients =
+                        getMultiOutputIngredients(
+                                input.getItem(),
+                                result.getCount(),
+                                recipeIngredients
+                        );
+
+                if (multiOutputIngredients.isEmpty()) {
+                    continue;
+                }
+
+                ingredients = multiOutputIngredients.get();
+            }
+
+            return Optional.of(
+                    calculatePotentialOutputs(ingredients)
+            );
+
+        } catch (RuntimeException exception) {
+            // Match the existing recovery method's handling
+            // of recipes that cannot be evaluated.
+        }
+    }
+
+    return Optional.empty();
+}
+
+	private static List<PotentialOutput> calculatePotentialOutputs(
+			List<ItemStack> ingredients
+	) {
+		List<PotentialOutput> outputs = new ArrayList<>();
+
+		if (ingredients.isEmpty()) {
+			return outputs;
+		}
+
+		for (ItemStack ingredient : ingredients) {
+			outputs.add(
+					new PotentialOutput(
+							ingredient.copy(),
+							50.0
+					)
+			);
+		}
+
+		return outputs;
+	}
 
     private static ItemStack getStaticResult(Recipe<?> recipe) {
 
