@@ -61,10 +61,11 @@ public class RecyclerMenu extends AbstractContainerMenu {
 		) {
 			@Override
 			public boolean mayPlace(ItemStack stack) {
-				return container.canPlaceItem(
-						RecyclerBlockEntity.INPUT_SLOT,
-						stack
-				);
+				return blockEntity != null
+						&& container.canPlaceItem(
+								RecyclerBlockEntity.INPUT_SLOT,
+								stack
+						);
 			}
 		});
 
