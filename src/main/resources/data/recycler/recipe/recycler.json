@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IHI",
+    "ICI",
+    "FHF"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "H": "minecraft:hopper",
+    "C": "minecraft:crafting_table",
+    "F": "minecraft:furnace"
+  },
+  "result": {
+    "id": "recycler:recycler",
+    "count": 1
+  }
+}
