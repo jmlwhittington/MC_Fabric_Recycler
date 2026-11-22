@@ -284,32 +284,25 @@ public final class RecyclerLogic {
 				.findFirst();
 	}
 
-	private static boolean isGenericStoneIngredient(Ingredient ingredient) {
-		List<Holder<Item>> alternatives =
-				ingredient.items().toList();
-
-		return !alternatives.isEmpty()
-				&& alternatives.stream().allMatch(holder -> {
-					Item item = holder.value();
-
-					return holder.is(GENERIC_STONE_TAG)
-							|| item == Items.COBBLESTONE
-							|| item == Items.COBBLED_DEEPSLATE
-							|| item == Items.BLACKSTONE;
-				});
+	private static boolean isGenericStoneIngredient(
+			Ingredient ingredient
+	) {
+		return isTagIngredient(ingredient, GENERIC_STONE_TAG);
 	}
 
 	private static boolean isTagIngredient(
 			Ingredient ingredient,
 			TagKey<Item> tag
 	) {
-		List<Holder<Item>> alternatives =
-				ingredient.items().toList();
+		if (!(ingredient.display()
+				instanceof SlotDisplay.TagSlotDisplay tagDisplay)) {
+			return false;
+		}
 
-		return !alternatives.isEmpty()
-				&& alternatives.stream().allMatch(holder ->
-						holder.is(tag)
-				);
+		return tagDisplay.tag()
+				.unwrapKey()
+				.filter(tag::equals)
+				.isPresent();
 	}
 
 	private static Optional<Item> getGenericIngredient(
