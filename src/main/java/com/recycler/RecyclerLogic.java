@@ -131,11 +131,9 @@ public final class RecyclerLogic {
 
 		if (path.equals("carpet")
 				|| path.endsWith("_carpet")
-				|| path.endsWith("_ingot")
-				|| path.equals("bamboo_block")
+				|| (path.endsWith("_ingot")
+						&& !input.is(Items.NETHERITE_INGOT))
 				|| path.equals("stripped_bamboo_block")
-				|| path.equals("quartz_block")
-				|| path.equals("amethyst_block")
 				|| input.is(STORAGE_BLOCKS)
 				|| path.equals("copper_block")
 				|| path.equals("exposed_copper")
@@ -150,7 +148,10 @@ public final class RecyclerLogic {
 				|| path.equals("clay")
 				|| path.equals("honey_block")
 				|| path.endsWith("_wool_stairs")
-				|| path.endsWith("_wool_slab")) {
+				|| path.endsWith("_wool_slab")
+				|| path.equals("music_disc_5")
+				|| path.equals("ender_eye")
+				|| path.equals("magma_cream")) {
 			return true;
 		}
 		
