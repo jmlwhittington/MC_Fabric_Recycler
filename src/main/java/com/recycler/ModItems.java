@@ -8,7 +8,15 @@ import net.minecraft.world.item.Item;
 
 public final class ModItems {
 
-    public static final Item GENERIC_WOOD = register("generic_wood");
+	public static final Item GENERIC_WOOD = register(
+		"generic_wood",
+		new Item.Properties()
+			.setId(ResourceKey.create(
+				Registries.ITEM,
+				RecyclerMod.id("generic_wood")
+			))
+			.component(DataComponents.COOKING_FUEL, new Fuel(300))
+	);
 
     public static final Item GENERIC_STONE = register("generic_stone");
 	
