@@ -56,6 +56,12 @@ public final class RecyclerLogic {
 				Registries.ITEM,
 				Identifier.fromNamespaceAndPath("c", "planks")
 		);
+	
+	private static final TagKey<Item> WOODEN_TOOL_MATERIALS_TAG =
+		TagKey.create(
+			Registries.ITEM,
+			Identifier.withDefaultNamespace("wooden_tool_materials")
+		);
 
 	private static final TagKey<Item> GENERIC_STONE_TAG =
 		TagKey.create(
@@ -317,7 +323,8 @@ public final class RecyclerLogic {
 			Ingredient ingredient
 	) {
 		if (isTagIngredient(ingredient, GENERIC_WOOD_TAG)
-				|| isTagIngredient(ingredient, COMMON_PLANKS_TAG)) {
+				|| isTagIngredient(ingredient, COMMON_PLANKS_TAG)
+				|| isTagIngredient(ingredient, WOODEN_TOOL_MATERIALS_TAG)) {
 			return Optional.of(ModItems.GENERIC_WOOD);
 		}
 
