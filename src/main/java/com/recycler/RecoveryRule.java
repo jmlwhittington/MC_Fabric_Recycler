@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.math.BigDecimal;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -256,9 +257,27 @@ public final class RecoveryRule {
 				);
 			}
 
-            int count = output.has("count")
-                    ? output.get("count").getAsInt()
-                    : 1;
+			int count = 1;
+
+			if (output.has("count")) {
+				JsonElement countElement = output.get("count");
+
+				if (!countElement.isJsonPrimitive()
+						|| !countElement.getAsJsonPrimitive().isNumber()) {
+					throw new IllegalArgumentException(
+							"Output count must be a whole number."
+					);
+				}
+
+				try {
+					count = countElement.getAsBigDecimal().intValueExact();
+				} catch (RuntimeException exception) {
+					throw new IllegalArgumentException(
+							"Output count must be a whole number within the integer range.",
+							exception
+					);
+				}
+			}
 
             double chance = output.has("chance")
                     ? output.get("chance").getAsDouble()

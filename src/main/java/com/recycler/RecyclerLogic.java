@@ -51,6 +51,12 @@ public final class RecyclerLogic {
 				Identifier.withDefaultNamespace("planks")
 		);
 
+	private static final TagKey<Item> COMMON_PLANKS_TAG =
+		TagKey.create(
+				Registries.ITEM,
+				Identifier.fromNamespaceAndPath("c", "planks")
+		);
+
 	private static final TagKey<Item> GENERIC_STONE_TAG =
 		TagKey.create(
 				Registries.ITEM,
@@ -61,6 +67,12 @@ public final class RecyclerLogic {
 		TagKey.create(
 				Registries.ITEM,
 				Identifier.withDefaultNamespace("logs")
+		);
+
+	private static final TagKey<Item> COMMON_LOGS_TAG =
+		TagKey.create(
+				Registries.ITEM,
+				Identifier.fromNamespaceAndPath("c", "logs")
 		);
 
 	private static final TagKey<Item> WOODEN_SLABS_TAG =
@@ -232,7 +244,10 @@ public final class RecyclerLogic {
 		}
 
 		return ingredient.items()
-				.filter(holder -> holder.is(GENERIC_WOOD_TAG))
+				.filter(holder ->
+						holder.is(GENERIC_WOOD_TAG)
+								|| holder.is(COMMON_PLANKS_TAG)
+				)
 				.filter(holder -> {
 					Identifier plankId =
 							BuiltInRegistries.ITEM.getKey(holder.value());
@@ -301,7 +316,8 @@ public final class RecyclerLogic {
 			Ingredient ingredient,
 			Item resultItem
 	) {
-		if (isTagIngredient(ingredient, GENERIC_WOOD_TAG)) {
+		if (isTagIngredient(ingredient, GENERIC_WOOD_TAG)
+				|| isTagIngredient(ingredient, COMMON_PLANKS_TAG)) {
 			return Optional.of(ModItems.GENERIC_WOOD);
 		}
 
@@ -356,6 +372,12 @@ public final class RecyclerLogic {
 
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
+		
+		if (isDyedShulkerBox(input)) {
+			return Optional.of(
+					createIngredients(Items.SHULKER_BOX, 1)
+			);
+		}
 
 		if (item == Items.NAME_TAG) {
 			return Optional.of(
@@ -677,6 +699,7 @@ public final class RecyclerLogic {
 		return !alternatives.isEmpty()
 				&& alternatives.stream().allMatch(holder ->
 						holder.is(LOGS_TAG)
+								|| holder.is(COMMON_LOGS_TAG)
 								|| isWoodLogItem(holder.value())
 				);
 	}
@@ -718,7 +741,8 @@ public final class RecyclerLogic {
 					BuiltInRegistries.ITEM.getOptional(plankId);
 
 			return planks.isPresent()
-					&& new ItemStack(planks.get()).is(GENERIC_WOOD_TAG);
+					&& (new ItemStack(planks.get()).is(GENERIC_WOOD_TAG)
+							|| new ItemStack(planks.get()).is(COMMON_PLANKS_TAG));
 		}
 
 		return false;
@@ -973,13 +997,13 @@ public final class RecyclerLogic {
             return false;
         }
 		
+		if (RecoveryRule.hasApplicableRule(input)) {
+			return true;
+		}
+
 		if (isProtectedInput(input)) {
 			return false;
 		}
-
-        if (RecoveryRule.hasApplicableRule(input)) {
-            return true;
-        }
 		
 		Optional<Item> crackedBase = getCrackedBaseItem(input);
 
@@ -1090,15 +1114,15 @@ public final class RecyclerLogic {
             return Optional.empty();
         }
 		
-		if (isProtectedInput(input)) {
-			return Optional.empty();
-		}
-
-        Optional<List<ItemStack>> specialResult =
-                RecoveryRule.getRecoveryResult(input);
+		Optional<List<ItemStack>> specialResult =
+				RecoveryRule.getRecoveryResult(input);
 
 		if (specialResult.isPresent()) {
 			return specialResult;
+		}
+
+		if (isProtectedInput(input)) {
+			return Optional.empty();
 		}
 		
 		Optional<Item> crackedBase = getCrackedBaseItem(input);
@@ -1223,7 +1247,8 @@ public final class RecyclerLogic {
     }
 
 	public static boolean isProtectedInputForAudit(ItemStack input) {
-		return isProtectedInput(input);
+		return isProtectedInput(input)
+				&& !RecoveryRule.hasApplicableRule(input);
 	}
 
 	public static boolean isSpecialIngredientsForAudit(ItemStack input) {
@@ -1238,8 +1263,7 @@ public final class RecyclerLogic {
 				|| level.isClientSide()
 				|| level.getServer() == null
 				|| input == null
-				|| input.isEmpty()
-				|| isProtectedInput(input)) {
+				|| input.isEmpty()) {
 			return Optional.empty();
 		}
 
@@ -1256,6 +1280,10 @@ public final class RecyclerLogic {
 			}
 
 			return Optional.of(outputs);
+		}
+
+		if (isProtectedInput(input)) {
+			return Optional.empty();
 		}
 
 		Optional<Item> crackedBase = getCrackedBaseItem(input);
