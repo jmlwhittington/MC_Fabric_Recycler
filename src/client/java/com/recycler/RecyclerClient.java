@@ -48,53 +48,48 @@ public class RecyclerClient implements ClientModInitializer {
 							return;
 						}
 
-						client.player.displayClientMessage(
+						client.player.sendSystemMessage(
 								Component.literal(
 										"[Recycler] Configuration differs from this server."
-								),
-								false
+								)
 						);
 
 						if (processingMismatch) {
-							client.player.displayClientMessage(
+							client.player.sendSystemMessage(
 									Component.literal(
 											"Processing time: server = "
 													+ payload.processingTimeTicks()
 													+ " ticks; local = "
 													+ localProcessingTime
 													+ " ticks."
-									),
-									false
+									)
 							);
 						}
 
 						if (rulesMismatch) {
-							client.player.displayClientMessage(
+							client.player.sendSystemMessage(
 									Component.literal(
 											"Recovery rules: server and local rules differ."
-									),
-									false
+									)
 							);
 						}
 						
 						if (stairSlabMismatch) {
-							client.player.displayClientMessage(
+							client.player.sendSystemMessage(
 									Component.literal(
 											"Stair/slab crafting: server = "
 													+ payload.stairSlabCraftingEnabled()
 													+ "; local = "
 													+ localStairSlabSetting
-									),
-									false
+									)
 							);
 						}
 
-						client.player.displayClientMessage(
+						client.player.sendSystemMessage(
 								Component.literal(
 										"The server controls Recycler behavior. "
 												+ "Your local configuration was not changed."
 								),
-								false
 						);
 					});
 				}
