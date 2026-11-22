@@ -230,17 +230,71 @@ public final class RecyclerLogic {
 		return false;
 	}
 
+	private static Optional<Item> getWoodSpecificIngredient(
+			Ingredient ingredient,
+			Item resultItem
+	) {
+		Identifier resultId =
+				BuiltInRegistries.ITEM.getKey(resultItem);
+
+		String path = resultId.getPath();
+
+		String[] woodTypes = {
+				"oak",
+				"spruce",
+				"birch",
+				"jungle",
+				"acacia",
+				"dark_oak",
+				"mangrove",
+				"cherry",
+				"bamboo",
+				"crimson",
+				"warped",
+				"pale_oak"
+		};
+
+		for (String wood : woodTypes) {
+			if (!path.startsWith(wood + "_")) {
+				continue;
+			}
+
+			Identifier plankId =
+					Identifier.fromNamespaceAndPath(
+							resultId.getNamespace(),
+							wood + "_planks"
+					);
+
+			Optional<Item> planks =
+					BuiltInRegistries.ITEM.getOptional(plankId);
+
+			if (planks.isPresent()
+					&& ingredient.test(new ItemStack(planks.get()))) {
+				return planks;
+			}
+		}
+
+		return Optional.empty();
+	}
+
 	private static Optional<Item> getGenericIngredient(
 			Ingredient ingredient,
 			Item resultItem
 	) {
-		if (ingredient.items().allMatch(
+		List<Holder<Item>> alternatives =
+				ingredient.items().toList();
+
+		if (alternatives.isEmpty()) {
+			return Optional.empty();
+		}
+
+		if (alternatives.stream().allMatch(
 				holder -> holder.is(GENERIC_WOOD_TAG)
 		) && !isWoodSpecificOutput(resultItem)) {
 			return Optional.of(ModItems.GENERIC_WOOD);
 		}
 
-		if (ingredient.items().allMatch(
+		if (alternatives.stream().allMatch(
 				holder -> holder.is(GENERIC_STONE_TAG)
 		)) {
 			return Optional.of(ModItems.GENERIC_STONE);
@@ -253,8 +307,21 @@ public final class RecyclerLogic {
 			Ingredient ingredient,
 			Item resultItem
 	) {
+		Optional<Item> woodSpecific =
+				getWoodSpecificIngredient(
+						ingredient,
+						resultItem
+				);
+
+		if (woodSpecific.isPresent()) {
+			return woodSpecific;
+		}
+
 		Optional<Item> generic =
-				getGenericIngredient(ingredient, resultItem);
+				getGenericIngredient(
+						ingredient,
+						resultItem
+				);
 
 		if (generic.isPresent()) {
 			return generic;
