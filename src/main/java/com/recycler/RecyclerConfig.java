@@ -1,4 +1,4 @@
-package com.example.mymod;
+package com.recycler;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -9,6 +9,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.math.BigDecimal;
 
 public final class RecyclerConfig {
 
@@ -51,15 +52,22 @@ public final class RecyclerConfig {
                 );
             }
 
-            int configuredTime = json.get("processing_time_ticks").getAsInt();
+			BigDecimal configuredValue = json
+					.getAsJsonPrimitive("processing_time_ticks")
+					.getAsBigDecimal();
 
-            if (configuredTime < MIN_PROCESSING_TIME_TICKS) {
-                throw new JsonParseException(
-                        "processing_time_ticks must be at least 1"
-                );
-            }
+			if (configuredValue.stripTrailingZeros().scale() > 0
+					|| configuredValue.compareTo(BigDecimal.ONE) < 0
+					|| configuredValue.compareTo(BigDecimal.valueOf(Integer.MAX_VALUE)) > 0) {
+				throw new JsonParseException(
+						"processing_time_ticks must be a whole number between 1 and "
+								+ Integer.MAX_VALUE
+				);
+			}
 
-            processingTimeTicks = configuredTime;
+			int configuredTime = configuredValue.intValueExact();
+
+			processingTimeTicks = configuredTime;
 
         } catch (IOException | JsonParseException | NumberFormatException e) {
             processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;

@@ -92,7 +92,7 @@ public class RecyclerMenu extends AbstractContainerMenu {
 
 	public float getProgress() {
 		return Math.min(1.0F,
-				Math.max(0.0F, machineData[0] / (float) RecyclerBlockEntity.PROCESSING_TIME));
+				Math.max(0.0F, machineData[0] / (float) RecyclerConfig.getProcessingTimeTicks()));
 	}
 
     @Override
