@@ -69,6 +69,12 @@ public final class RecyclerLogic {
 				Identifier.withDefaultNamespace("wooden_slabs")
 		);
 
+	private static final TagKey<Item> COMMON_WOODEN_SLABS_TAG =
+		TagKey.create(
+				Registries.ITEM,
+				Identifier.fromNamespaceAndPath("c", "wooden_slabs")
+		);
+
     private RecyclerLogic() {
     }
 	
@@ -658,13 +664,10 @@ public final class RecyclerLogic {
 	}
 
 	private static boolean isWoodSlabIngredient(Ingredient ingredient) {
-		List<Holder<Item>> alternatives =
-				ingredient.items().toList();
-
-		return !alternatives.isEmpty()
-				&& alternatives.stream().allMatch(
-						holder -> holder.is(WOODEN_SLABS_TAG)
-				);
+		return ingredient.items().anyMatch(holder ->
+				holder.is(WOODEN_SLABS_TAG)
+						|| holder.is(COMMON_WOODEN_SLABS_TAG)
+		);
 	}
 
 	private static boolean isWoodLogIngredient(Ingredient ingredient) {
