@@ -13,6 +13,9 @@
       "com.recycler.RecyclerClient"
     ]
   },
+  "mixins": [
+    "recycler.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.20.1",
 	"fabric-api": "*",
