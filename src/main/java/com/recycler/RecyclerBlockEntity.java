@@ -173,6 +173,13 @@ public class RecyclerBlockEntity extends BlockEntity
 
 		ItemStack input = blockEntity.getItem(INPUT_SLOT);
 
+		int processingTime = RecyclerConfig.getProcessingTimeTicks();
+
+		if (blockEntity.processingTicks > processingTime) {
+			blockEntity.processingTicks = processingTime;
+			blockEntity.setChanged();
+		}
+
 		if (input.isEmpty()) {
 			if (blockEntity.processingTicks != 0
 					|| blockEntity.isProcessing

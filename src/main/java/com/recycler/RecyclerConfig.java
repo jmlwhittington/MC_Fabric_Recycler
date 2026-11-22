@@ -5,13 +5,17 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import net.fabricmc.loader.api.FabricLoader;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.math.BigDecimal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class RecyclerConfig {
+
+	private static final Logger LOGGER =
+        LoggerFactory.getLogger("Recycler");
 
     private static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
@@ -72,15 +76,12 @@ public final class RecyclerConfig {
         } catch (IOException | JsonParseException | NumberFormatException e) {
             processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
 
-            System.err.println(
-                    "[Recycler] Failed to load config from "
-                            + CONFIG_PATH
-                            + ". Using default processing time of "
-                            + DEFAULT_PROCESSING_TIME_TICKS
-                            + " ticks."
-            );
-
-            e.printStackTrace();
+			LOGGER.error(
+					"Failed to load config from {}. Using default processing time of {} ticks.",
+					CONFIG_PATH,
+					DEFAULT_PROCESSING_TIME_TICKS,
+					e
+			);
         }
     }
 

@@ -57,7 +57,15 @@ public class RecyclerMenu extends AbstractContainerMenu {
 				RecyclerBlockEntity.INPUT_SLOT,
 				26,
 				34
-		));
+		) {
+			@Override
+			public boolean mayPlace(ItemStack stack) {
+				return container.canPlaceItem(
+						RecyclerBlockEntity.INPUT_SLOT,
+						stack
+				);
+			}
+		});
 
 		for (int row = 0; row < 2; row++) {
 			for (int column = 0; column < 3; column++) {

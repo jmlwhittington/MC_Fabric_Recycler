@@ -55,13 +55,15 @@ public class RecyclerMod implements ModInitializer {
 									.then(
 											Commands.literal("reload")
 													.executes(context -> {
+														RecyclerConfig.load();
+														
 														boolean success =
 																RecoveryRule.reload();
 
 														if (success) {
 															context.getSource().sendSuccess(
 																	() -> Component.literal(
-																			"Recycler recovery rules reloaded successfully."
+																			"Recycler configuration and recovery rules reloaded successfully."
 																	),
 																	false
 															);
