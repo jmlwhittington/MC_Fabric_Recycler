@@ -149,7 +149,7 @@ public class RecyclerBlockEntity extends BlockEntity
 			return true;
 		}
 
-		return RecyclerLogic.recoverIngredients(level, stack).isPresent();
+		return RecyclerLogic.canRecycleInput(level, stack);
 	}
 
     @Override

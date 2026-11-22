@@ -20,7 +20,7 @@ public class RecyclerMenu extends AbstractContainerMenu {
     private final Container container;
 
 	private final RecyclerBlockEntity blockEntity;
-	private final int[] machineData = new int[1];
+	private final int[] machineData = new int[2];
 
     public RecyclerMenu(int containerId, Inventory playerInventory) {
         this(
