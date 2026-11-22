@@ -36,6 +36,7 @@ public class RecyclerMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModItems.initialize();
+		StairSlabRecipe.register();
 		registerGlassShardDrops();
 		ModBlocks.initialize();
 		ModMenuTypes.initialize();
@@ -77,6 +78,7 @@ public class RecyclerMod implements ModInitializer {
 				(server, resourceManager, success) -> {
 					if (success) {
 						RecyclerLogic.clearNetheriteRecipeCache();
+						StairSlabRecipe.clearCache();
 					}
 				}
 		);

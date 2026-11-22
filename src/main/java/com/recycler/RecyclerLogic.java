@@ -1263,6 +1263,10 @@ public final class RecyclerLogic {
 					new ItemStack(crackedBase.get())
 			);
 		}
+		
+		if (getSpecialIngredients(input).isPresent()) {
+			return true;
+		}
 
 		Item recipeInput = getRecipeLookupItem(input);
 		

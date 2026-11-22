@@ -23,6 +23,8 @@ public final class RecyclerConfig {
 
     private static final int DEFAULT_PROCESSING_TIME_TICKS = 100;
     private static final int MIN_PROCESSING_TIME_TICKS = 1;
+	
+	private static final boolean DEFAULT_ENABLE_STAIR_SLAB_CRAFTING = true;
 
     private static final Path CONFIG_PATH = FabricLoader.getInstance()
             .getConfigDir()
@@ -76,12 +78,29 @@ public final class RecyclerConfig {
 				);
 			}
 
+			boolean configuredStairSlabCrafting =
+					DEFAULT_ENABLE_STAIR_SLAB_CRAFTING;
+
+			if (json.has("enable_stair_slab_crafting")) {
+				if (!json.get("enable_stair_slab_crafting").isJsonPrimitive()
+						|| !json.getAsJsonPrimitive("enable_stair_slab_crafting").isBoolean()) {
+					throw new JsonParseException(
+							"Invalid enable_stair_slab_crafting"
+					);
+				}
+
+				configuredStairSlabCrafting =
+						json.get("enable_stair_slab_crafting").getAsBoolean();
+			}
+
 			processingTimeTicks = configuredValue.intValueExact();
+			enableStairSlabCrafting = configuredStairSlabCrafting;
 
 			return true;
 
 		} catch (IOException | JsonParseException | NumberFormatException e) {
 			processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
+			enableStairSlabCrafting = DEFAULT_ENABLE_STAIR_SLAB_CRAFTING;
 
 			LOGGER.error(
 					"Failed to load config from {}. Using default processing time of {} ticks.",
@@ -100,7 +119,12 @@ public final class RecyclerConfig {
                 "processing_time_ticks",
                 DEFAULT_PROCESSING_TIME_TICKS
         );
-
+		
+		json.addProperty(
+				"enable_stair_slab_crafting",
+				DEFAULT_ENABLE_STAIR_SLAB_CRAFTING
+		);
+		
         Files.writeString(CONFIG_PATH, GSON.toJson(json));
         processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
     }
@@ -108,4 +132,7 @@ public final class RecyclerConfig {
     public static int getProcessingTimeTicks() {
         return processingTimeTicks;
     }
+	
+	private static boolean enableStairSlabCrafting =
+        DEFAULT_ENABLE_STAIR_SLAB_CRAFTING;
 }
