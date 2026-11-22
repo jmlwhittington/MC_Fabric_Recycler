@@ -165,7 +165,7 @@ public final class RecyclerLogic {
 
 		for (int i = 0; i < 3; i++) {
 			ingredients.add(new ItemStack(wool.get()));
-			ingredients.add(new ItemStack(Items.OAK_PLANKS));
+			ingredients.add(new ItemStack(ModItems.GENERIC_WOOD));
 		}
 
 		return Optional.of(ingredients);
@@ -684,6 +684,37 @@ public final class RecyclerLogic {
 			}
 		}
 
+		Optional<Item> woodSpecificIngredient =
+				getWoodSpecificIngredient(
+						ingredients.get(0),
+						lookupItem
+				);
+
+		if (woodSpecificIngredient.isPresent()) {
+			ItemStack woodStack =
+					new ItemStack(woodSpecificIngredient.get());
+
+			boolean allMatch = ingredients.stream().allMatch(
+					ingredient -> ingredient.test(woodStack)
+			);
+
+			if (allMatch) {
+				int ingredientCost =
+						ingredients.size() / outputCount;
+
+				if (path.equals("copper_trapdoor")) {
+					ingredientCost = 4;
+				}
+
+				return Optional.of(
+						createIngredients(
+								woodSpecificIngredient.get(),
+								ingredientCost
+						)
+				);
+			}
+		}
+
 		Optional<Item> genericIngredient =
 				getGenericIngredient(
 						ingredients.get(0),
@@ -1063,6 +1094,15 @@ public final class RecyclerLogic {
 			}
 
 			return Optional.of(outputs);
+		}
+
+		Optional<Item> crackedBase = getCrackedBaseItem(input);
+
+		if (crackedBase.isPresent()) {
+			return getPotentialOutputs(
+					level,
+					new ItemStack(crackedBase.get())
+			);
 		}
 
 		Optional<List<ItemStack>> specialIngredients =
