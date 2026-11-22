@@ -658,69 +658,6 @@ public final class RecyclerLogic {
 		return recoveredItems;
 	}
 
-	private static Optional<List<ItemStack>> getRecipeSpecificIngredients(
-			Item resultItem,
-			List<Ingredient> recipeIngredients
-	) {
-		List<ItemStack> recoveredIngredients = new ArrayList<>();
-
-		int slabCount = 0;
-		int logCount = 0;
-
-		for (Ingredient ingredient : recipeIngredients) {
-
-			if (isWoodSlabIngredient(ingredient)) {
-				slabCount++;
-				continue;
-			}
-
-			if (isWoodLogIngredient(ingredient)) {
-				logCount++;
-
-				recoveredIngredients.add(
-						new ItemStack(ModItems.GENERIC_WOOD, 4)
-				);
-
-				continue;
-			}
-
-			Optional<Item> representative =
-					getRepresentativeIngredient(
-							ingredient,
-							resultItem
-					);
-
-			if (representative.isEmpty()) {
-				return Optional.empty();
-			}
-
-			recoveredIngredients.add(
-					new ItemStack(representative.get())
-			);
-		}
-
-		if (slabCount > 0) {
-			recoveredIngredients.addAll(
-					createIngredients(
-							ModItems.GENERIC_WOOD,
-							slabCount / 2
-					)
-			);
-		}
-
-		return Optional.of(recoveredIngredients);
-	}
-
-	private static boolean usesRecipeSpecificRecovery(
-			List<Ingredient> ingredients
-	) {
-		return ingredients.stream().anyMatch(
-				ingredient ->
-						isWoodSlabIngredient(ingredient)
-						|| isWoodLogIngredient(ingredient)
-		);
-	}
-
 	private static boolean isWoodSlabIngredient(Ingredient ingredient) {
 		List<Holder<Item>> alternatives =
 				ingredient.items().toList();
@@ -790,9 +727,7 @@ public final class RecyclerLogic {
 			int outputCount,
 			List<Ingredient> ingredients
 	) {
-		if (outputCount <= 1
-				|| ingredients.isEmpty()
-				|| ingredients.size() % outputCount != 0) {
+		if (outputCount <= 1 || ingredients.isEmpty()) {
 			return Optional.empty();
 		}
 
@@ -813,110 +748,235 @@ public final class RecyclerLogic {
 			if (outputCount != 2 || ingredients.size() != 6) {
 				return Optional.empty();
 			}
-		}
 
-		Optional<Item> woodSpecificIngredient =
-				getWoodSpecificIngredient(
-						ingredients.get(0),
-						lookupItem
-				);
+		boolean hasSlabOrLog = ingredients.stream().anyMatch(
+				ingredient ->
+						isWoodSlabIngredient(ingredient)
+						|| isWoodLogIngredient(ingredient)
+		);
 
-		if (woodSpecificIngredient.isPresent()) {
-			ItemStack woodStack =
-					new ItemStack(woodSpecificIngredient.get());
+		if (hasSlabOrLog && ingredients.size() > 1) {
+			int slabSlots = 0;
+			int logSlots = 0;
 
-			boolean allMatch = ingredients.stream().allMatch(
-					ingredient -> ingredient.test(woodStack)
-			);
+			Map<Item, Integer> ordinaryIngredients = new LinkedHashMap<>();
 
-			if (allMatch) {
-				int ingredientCost =
-						ingredients.size() / outputCount;
+			for (Ingredient ingredient : ingredients) {
 
-				if (path.equals("copper_trapdoor")) {
-					ingredientCost = 4;
+				if (isWoodSlabIngredient(ingredient)) {
+					slabSlots++;
+					continue;
 				}
 
-				return Optional.of(
+				if (isWoodLogIngredient(ingredient)) {
+					logSlots++;
+					continue;
+				}
+
+				Optional<Item> representative =
+						getRepresentativeIngredient(
+								ingredient,
+								lookupItem
+						);
+
+				if (representative.isEmpty()) {
+					return Optional.empty();
+				}
+
+				ordinaryIngredients.merge(
+						representative.get(),
+						1,
+						Integer::sum
+				);
+			}
+
+			for (int count : ordinaryIngredients.values()) {
+				if (count % outputCount != 0) {
+					return Optional.empty();
+				}
+			}
+
+			if (logSlots % outputCount != 0) {
+				return Optional.empty();
+			}
+
+			if (slabSlots % (outputCount * 2) != 0) {
+				return Optional.empty();
+			}
+
+			List<ItemStack> recoveredIngredients = new ArrayList<>();
+
+			for (Map.Entry<Item, Integer> entry : ordinaryIngredients.entrySet()) {
+				recoveredIngredients.addAll(
 						createIngredients(
-								woodSpecificIngredient.get(),
-								ingredientCost
+								entry.getKey(),
+								entry.getValue() / outputCount
 						)
 				);
 			}
-		}
 
-		Optional<Item> genericIngredient =
-				getGenericIngredient(
-						ingredients.get(0),
-						lookupItem
+			for (int i = 0; i < logSlots / outputCount; i++) {
+				recoveredIngredients.add(
+						new ItemStack(ModItems.GENERIC_WOOD, 4)
 				);
+			}
 
-		if (genericIngredient.isPresent()) {
-			boolean allGeneric = ingredients.stream().allMatch(
-					ingredient ->
-							getGenericIngredient(ingredient, lookupItem)
-									.filter(genericIngredient.get()::equals)
-									.isPresent()
+			recoveredIngredients.addAll(
+					createIngredients(
+							ModItems.GENERIC_WOOD,
+							slabSlots / (outputCount * 2)
+					)
 			);
 
-			if (allGeneric) {
-				int ingredientCost =
-						ingredients.size() / outputCount;
+			return Optional.of(recoveredIngredients);
+		}
 
-				if (path.equals("copper_trapdoor")) {
-					ingredientCost = 4;
-				}
+			Optional<Item> woodSpecific =
+					getWoodSpecificIngredient(
+							ingredients.get(0),
+							lookupItem
+					);
 
+			if (woodSpecific.isPresent()
+					&& ingredients.stream().allMatch(
+							ingredient ->
+									ingredient.test(new ItemStack(woodSpecific.get()))
+					)) {
 				return Optional.of(
-						createIngredients(
-								genericIngredient.get(),
-								ingredientCost
-						)
+						createIngredients(woodSpecific.get(), 4)
 				);
+			}
+
+			Optional<Item> generic =
+					getGenericIngredient(
+							ingredients.get(0),
+							lookupItem
+					);
+
+			if (generic.isPresent()
+					&& ingredients.stream().allMatch(
+							ingredient ->
+									getGenericIngredient(ingredient, lookupItem)
+											.filter(generic.get()::equals)
+											.isPresent()
+					)) {
+				return Optional.of(
+						createIngredients(generic.get(), 4)
+				);
+			}
+
+			Optional<Holder<Item>> representative =
+					ingredients.get(0).items()
+							.sorted(
+									Comparator.comparing(holder ->
+											BuiltInRegistries.ITEM
+													.getKey(holder.value())
+													.toString()
+									)
+							)
+							.filter(holder -> {
+								ItemStack stack =
+										new ItemStack(holder.value());
+
+								return ingredients.stream().allMatch(
+										ingredient -> ingredient.test(stack)
+								);
+							})
+							.findFirst();
+
+			if (representative.isEmpty()) {
+				return Optional.empty();
+			}
+
+			return Optional.of(
+					createIngredients(representative.get().value(), 4)
+			);
+		}
+
+		boolean allowSlabLogConversion = ingredients.size() > 1;
+
+		int slabSlots = 0;
+		int logSlots = 0;
+
+		Map<Item, Integer> ingredientCounts = new LinkedHashMap<>();
+
+		for (Ingredient ingredient : ingredients) {
+
+			if (allowSlabLogConversion
+					&& isWoodSlabIngredient(ingredient)) {
+				slabSlots++;
+				continue;
+			}
+
+			if (allowSlabLogConversion
+					&& isWoodLogIngredient(ingredient)) {
+				logSlots++;
+				continue;
+			}
+
+			Optional<Item> representative =
+					getRepresentativeIngredient(
+							ingredient,
+							lookupItem
+					);
+
+			if (representative.isEmpty()) {
+				return Optional.empty();
+			}
+
+			ingredientCounts.merge(
+					representative.get(),
+					1,
+					Integer::sum
+			);
+		}
+
+		for (int count : ingredientCounts.values()) {
+			if (count % outputCount != 0) {
+				return Optional.empty();
 			}
 		}
 
-		Optional<Holder<Item>> representative =
-				ingredients.get(0).items()
-						.sorted(
-								Comparator.comparing(itemHolder ->
-										BuiltInRegistries.ITEM
-												.getKey(itemHolder.value())
-												.toString()
-								)
-						)
-						.filter(itemHolder -> {
-							ItemStack stack =
-									new ItemStack(itemHolder.value());
-
-							for (Ingredient ingredient : ingredients) {
-								if (!ingredient.test(stack)) {
-									return false;
-								}
-							}
-
-							return true;
-						})
-						.findFirst();
-
-		if (representative.isEmpty()) {
+		if (logSlots % outputCount != 0) {
 			return Optional.empty();
 		}
 
-		int ingredientCost =
-				ingredients.size() / outputCount;
-
-		if (path.equals("copper_trapdoor")) {
-			ingredientCost = 4;
+		if (slabSlots % (outputCount * 2) != 0) {
+			return Optional.empty();
 		}
 
-		return Optional.of(
+		List<ItemStack> recoveredIngredients = new ArrayList<>();
+
+		for (Map.Entry<Item, Integer> entry : ingredientCounts.entrySet()) {
+			int ingredientCost = entry.getValue() / outputCount;
+
+			recoveredIngredients.addAll(
+					createIngredients(
+							entry.getKey(),
+							ingredientCost
+					)
+			);
+		}
+
+		int logsPerOutput = logSlots / outputCount;
+
+		for (int i = 0; i < logsPerOutput; i++) {
+			recoveredIngredients.add(
+					new ItemStack(ModItems.GENERIC_WOOD, 4)
+			);
+		}
+
+		int slabPairsPerOutput =
+				slabSlots / (outputCount * 2);
+
+		recoveredIngredients.addAll(
 				createIngredients(
-						representative.get().value(),
-						ingredientCost
+						ModItems.GENERIC_WOOD,
+						slabPairsPerOutput
 				)
 		);
+
+		return Optional.of(recoveredIngredients);
 	}
 
     public static boolean canRecycleInput(Level level, ItemStack input) {
@@ -1004,19 +1064,6 @@ public final class RecyclerLogic {
 
 				if (result.getCount() == 1
 						&& ingredients.size() <= 1) {
-					continue;
-				}
-
-				if (result.getCount() == 1
-						&& usesRecipeSpecificRecovery(ingredients)) {
-
-					if (getRecipeSpecificIngredients(
-							result.getItem(),
-							ingredients
-					).isPresent()) {
-						return true;
-					}
-
 					continue;
 				}
 
@@ -1150,62 +1197,45 @@ public final class RecyclerLogic {
 				List<ItemStack> ingredients;
 
 				if (result.getCount() == 1) {
+					ingredients = new ArrayList<>(recipeIngredients.size());
 
-					Optional<List<ItemStack>> recipeSpecificIngredients =
-							getRecipeSpecificIngredients(
-									result.getItem(),
-									recipeIngredients
-							);
+					boolean validIngredients = true;
 
-					if (usesRecipeSpecificRecovery(recipeIngredients)) {
-						if (recipeSpecificIngredients.isEmpty()) {
-							continue;
+					for (Ingredient ingredient : recipeIngredients) {
+						Optional<Item> representative =
+								getRepresentativeIngredient(
+										ingredient,
+										result.getItem()
+								);
+
+						if (representative.isEmpty()) {
+							validIngredients = false;
+							break;
 						}
 
-						ingredients = recipeSpecificIngredients.get();
+						ingredients.add(
+								new ItemStack(representative.get())
+						);
+					}
 
-					} else {
-						ingredients = new ArrayList<>(recipeIngredients.size());
-
-						boolean validIngredients = true;
-
-						for (Ingredient ingredient : recipeIngredients) {
-							Optional<Item> representative =
-									getRepresentativeIngredient(
-											ingredient,
-											result.getItem()
-									);
-
-							if (representative.isEmpty()) {
-								validIngredients = false;
-								break;
-							}
-
-							ingredients.add(
-									new ItemStack(representative.get())
-							);
-						}
-
-						if (!validIngredients) {
-							continue;
-						}
+					if (!validIngredients) {
+						continue;
 					}
 
 				} else {
+					Optional<List<ItemStack>> multiOutputIngredients =
+							getMultiOutputIngredients(
+									input.getItem(),
+									result.getCount(),
+									recipeIngredients
+							);
 
-						Optional<List<ItemStack>> multiOutputIngredients =
-								getMultiOutputIngredients(
-										input.getItem(),
-										result.getCount(),
-										recipeIngredients
-								);
-
-						if (multiOutputIngredients.isEmpty()) {
-							continue;
-						}
-
-						ingredients = multiOutputIngredients.get();
+					if (multiOutputIngredients.isEmpty()) {
+						continue;
 					}
+
+					ingredients = multiOutputIngredients.get();
+				}
 
 				return Optional.of(rollRecovery(ingredients));
 
@@ -1316,45 +1346,29 @@ public final class RecyclerLogic {
 				List<ItemStack> ingredients;
 
 				if (result.getCount() == 1) {
+					ingredients = new ArrayList<>(recipeIngredients.size());
 
-					Optional<List<ItemStack>> recipeSpecificIngredients =
-							getRecipeSpecificIngredients(
-									result.getItem(),
-									recipeIngredients
-							);
+					boolean validIngredients = true;
 
-					if (usesRecipeSpecificRecovery(recipeIngredients)) {
-						if (recipeSpecificIngredients.isEmpty()) {
-							continue;
+					for (Ingredient ingredient : recipeIngredients) {
+						Optional<Item> representative =
+								getRepresentativeIngredient(
+										ingredient,
+										result.getItem()
+								);
+
+						if (representative.isEmpty()) {
+							validIngredients = false;
+							break;
 						}
 
-						ingredients = recipeSpecificIngredients.get();
+						ingredients.add(
+								new ItemStack(representative.get())
+						);
+					}
 
-					} else {
-						ingredients = new ArrayList<>(recipeIngredients.size());
-
-						boolean validIngredients = true;
-
-						for (Ingredient ingredient : recipeIngredients) {
-							Optional<Item> representative =
-									getRepresentativeIngredient(
-											ingredient,
-											result.getItem()
-									);
-
-							if (representative.isEmpty()) {
-								validIngredients = false;
-								break;
-							}
-
-							ingredients.add(
-									new ItemStack(representative.get())
-							);
-						}
-
-						if (!validIngredients) {
-							continue;
-						}
+					if (!validIngredients) {
+						continue;
 					}
 
 				} else {
