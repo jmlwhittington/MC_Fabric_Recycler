@@ -62,6 +62,12 @@ public final class RecyclerLogic {
 				Registries.ITEM,
 				Identifier.withDefaultNamespace("stone_crafting_materials")
 		);
+	
+	private static final TagKey<Item> GENERIC_STONE_TOOL_TAG =
+        TagKey.create(
+                Registries.ITEM,
+                Identifier.withDefaultNamespace("stone_tool_materials")
+        );
 
 	private static final TagKey<Item> LOGS_TAG =
 		TagKey.create(
@@ -124,6 +130,7 @@ public final class RecyclerLogic {
 				|| path.equals("waxed_weathered_copper")
 				|| path.equals("waxed_oxidized_copper")
 				|| path.equals("granite")
+				|| path.equals("diorite")
 				|| path.equals("clay")
 				|| path.equals("honey_block")
 				|| path.endsWith("_wool_stairs")
@@ -287,7 +294,8 @@ public final class RecyclerLogic {
 	private static boolean isGenericStoneIngredient(
 			Ingredient ingredient
 	) {
-		return isTagIngredient(ingredient, GENERIC_STONE_TAG);
+		return isTagIngredient(ingredient, GENERIC_STONE_TAG)
+				|| isTagIngredient(ingredient, GENERIC_STONE_TOOL_TAG);
 	}
 
 	private static boolean isTagIngredient(
@@ -676,6 +684,12 @@ public final class RecyclerLogic {
 						holder.is(WOODEN_SLABS_TAG)
 								|| holder.is(COMMON_WOODEN_SLABS_TAG)
 				);
+				
+		if (ingredient.display()
+				instanceof SlotDisplay.ItemSlotDisplay itemDisplay
+				&& itemDisplay.item().value() == Items.BAMBOO_SLAB) {
+			return false;
+		}
 	}
 
 	private static boolean isWoodLogIngredient(Ingredient ingredient) {
@@ -760,7 +774,8 @@ public final class RecyclerLogic {
 		boolean hasSlabOrLog = ingredients.stream().anyMatch(
 				ingredient ->
 						isWoodSlabIngredient(ingredient)
-						|| isWoodLogIngredient(ingredient)
+						|| (lookupItem != Items.CREAKING_HEART
+								&& isWoodLogIngredient(ingredient))
 		);
 
 		if (hasSlabOrLog && ingredients.size() > 1) {
@@ -805,10 +820,6 @@ public final class RecyclerLogic {
 			}
 
 			if (logSlots % outputCount != 0) {
-				return Optional.empty();
-			}
-
-			if (slabSlots % (outputCount * 2) != 0) {
 				return Optional.empty();
 			}
 
