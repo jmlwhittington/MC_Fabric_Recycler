@@ -20,7 +20,7 @@ public class RecyclerMenu extends AbstractContainerMenu {
     private final Container container;
 
 	private final RecyclerBlockEntity blockEntity;
-	private final int[] machineData = new int[2];
+	private final int[] machineData = new int[1];
 
     public RecyclerMenu(int containerId, Inventory playerInventory) {
         this(
@@ -49,7 +49,6 @@ public class RecyclerMenu extends AbstractContainerMenu {
 				: null;
 
 		addDataSlot(DataSlot.shared(machineData, 0));
-		addDataSlot(DataSlot.shared(machineData, 1));
 
         container.startOpen(playerInventory.player);
 

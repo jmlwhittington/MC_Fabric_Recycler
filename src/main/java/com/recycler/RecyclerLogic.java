@@ -368,6 +368,117 @@ public final class RecyclerLogic {
 				.findFirst();
 	}
 
+	private static Optional<List<ItemStack>> getNetheriteIngredients(
+			Level level,
+			ItemStack input
+	) {
+		Optional<Item> diamondEquivalent =
+				getDiamondEquivalent(input);
+
+		if (diamondEquivalent.isEmpty()) {
+			return Optional.empty();
+		}
+
+		Item diamondItem = diamondEquivalent.get();
+
+		List<RecipeHolder<?>> recipes = new ArrayList<>(
+				level.getServer().getRecipeManager().getRecipes()
+		);
+
+		recipes.sort(
+				Comparator.comparing(
+						recipeHolder ->
+								recipeHolder.id().identifier().toString()
+				)
+		);
+
+		for (RecipeHolder<?> holder : recipes) {
+			Recipe<?> recipe = holder.value();
+
+			if (recipe.getClass() != ShapedRecipe.class
+					&& recipe.getClass() != ShapelessRecipe.class) {
+				continue;
+			}
+
+			if (recipe.getType() != RecipeType.CRAFTING) {
+				continue;
+			}
+
+			try {
+				ItemStack result = getStaticResult(recipe);
+
+				if (result.isEmpty()
+						|| result.getItem() != diamondItem) {
+					continue;
+				}
+
+				NormalCraftingRecipe craftingRecipe =
+						(NormalCraftingRecipe) recipe;
+
+				List<Ingredient> recipeIngredients =
+						craftingRecipe.placementInfo().ingredients();
+
+				Optional<List<ItemStack>> ingredients =
+						getRecipeIngredients(
+								diamondItem,
+								result.getCount(),
+								recipeIngredients
+						);
+
+				if (ingredients.isEmpty()) {
+					continue;
+				}
+
+				List<ItemStack> recoveredIngredients =
+						new ArrayList<>(ingredients.get());
+
+				recoveredIngredients.add(
+						new ItemStack(Items.NETHERITE_INGOT)
+				);
+
+				return Optional.of(recoveredIngredients);
+
+			} catch (RuntimeException exception) {
+			}
+		}
+
+		return Optional.empty();
+	}
+
+	private static Optional<Item> getDiamondEquivalent(ItemStack input) {
+		Identifier inputId =
+				BuiltInRegistries.ITEM.getKey(input.getItem());
+
+		if (!inputId.getNamespace().equals("minecraft")) {
+			return Optional.empty();
+		}
+
+		String path = inputId.getPath();
+
+		if (!path.startsWith("netherite_")) {
+			return Optional.empty();
+		}
+
+		String equipment = path.substring("netherite_".length());
+
+		boolean supportedEquipment = switch (equipment) {
+			case "helmet", "chestplate", "leggings", "boots",
+					"sword", "pickaxe", "axe", "shovel", "hoe" -> true;
+			default -> false;
+		};
+
+		if (!supportedEquipment) {
+			return Optional.empty();
+		}
+
+		Identifier diamondId = Identifier.fromNamespaceAndPath(
+				"minecraft",
+				"diamond_" + equipment
+		);
+
+		return BuiltInRegistries.ITEM.getOptional(diamondId);
+	}
+
 	private static Optional<List<ItemStack>> getSpecialIngredients(
 			ItemStack input
 	) {
@@ -915,6 +1026,10 @@ public final class RecyclerLogic {
 			return true;
 		}
 
+		if (getNetheriteIngredients(level, input).isPresent()) {
+			return true;
+		}
+
 		if (isProtectedInput(input)) {
 			return false;
 		}
@@ -1032,6 +1147,15 @@ public final class RecyclerLogic {
 
 		if (specialResult.isPresent()) {
 			return specialResult;
+		}
+
+		Optional<List<ItemStack>> netheriteIngredients =
+				getNetheriteIngredients(level, input);
+
+		if (netheriteIngredients.isPresent()) {
+			return Optional.of(
+					rollRecovery(netheriteIngredients.get())
+			);
 		}
 
 		if (isProtectedInput(input)) {
@@ -1181,6 +1305,15 @@ public final class RecyclerLogic {
 			}
 
 			return Optional.of(outputs);
+		}
+
+		Optional<List<ItemStack>> netheriteIngredients =
+				getNetheriteIngredients(level, input);
+
+		if (netheriteIngredients.isPresent()) {
+			return Optional.of(
+					calculatePotentialOutputs(netheriteIngredients.get())
+			);
 		}
 
 		if (isProtectedInput(input)) {
