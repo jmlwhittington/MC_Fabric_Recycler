@@ -7,8 +7,8 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.CookingFuel;
-import net.minecraft.world.item.component.ResolvableFloat;
-import net.minecraft.world.item.component.ResolvableInt;
+import net.minecraft.world.level.storage.loot.providers.number.floats.ResolvableFloat;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ResolvableInt;
 import net.minecraft.world.level.storage.loot.providers.number.floats.ContextFloatProviders;
 
 public final class ModItems {
