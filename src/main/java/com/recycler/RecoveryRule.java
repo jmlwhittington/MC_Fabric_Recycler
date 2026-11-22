@@ -25,6 +25,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Comparator;
+import java.util.HexFormat;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -427,4 +432,65 @@ public final class RecoveryRule {
 
         return results;
     }
+	
+	public static String getConfigurationFingerprint() {
+		StringBuilder canonical = new StringBuilder();
+
+		appendFingerprintSection(canonical, "items", itemRules);
+		appendFingerprintSection(canonical, "tags", tagRules);
+
+		try {
+			byte[] hash = MessageDigest.getInstance("SHA-256")
+					.digest(canonical.toString().getBytes(StandardCharsets.UTF_8));
+
+			return HexFormat.of().formatHex(hash);
+
+		} catch (NoSuchAlgorithmException exception) {
+			throw new IllegalStateException(
+					"SHA-256 is unavailable.",
+					exception
+			);
+		}
+	}
+
+	private static void appendFingerprintSection(
+			StringBuilder builder,
+			String sectionName,
+			Map<Identifier, List<OutputRule>> rules
+	) {
+		builder.append(sectionName).append('\n');
+
+		List<Map.Entry<Identifier, List<OutputRule>>> entries =
+				new ArrayList<>(rules.entrySet());
+
+		entries.sort(
+				Comparator.comparing(entry -> entry.getKey().toString())
+		);
+
+		for (Map.Entry<Identifier, List<OutputRule>> entry : entries) {
+			builder.append(entry.getKey()).append('\n');
+
+			List<OutputRule> outputs =
+					new ArrayList<>(entry.getValue());
+
+			outputs.sort(
+					Comparator
+							.comparing((OutputRule rule) ->
+									BuiltInRegistries.ITEM
+											.getKey(rule.item())
+											.toString())
+							.thenComparingInt(OutputRule::count)
+							.thenComparingDouble(OutputRule::chance)
+			);
+
+			for (OutputRule rule : outputs) {
+				builder.append(
+						BuiltInRegistries.ITEM.getKey(rule.item())
+				).append('|')
+						.append(rule.count()).append('|')
+						.append(Double.toString(rule.chance()))
+						.append('\n');
+			}
+		}
+	}
 }

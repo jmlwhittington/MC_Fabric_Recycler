@@ -4,6 +4,9 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.resources.Identifier;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -30,6 +33,32 @@ public class RecyclerMod implements ModInitializer {
 
 		RecyclerConfig.load();
 		RecoveryRule.initialize();
+		
+		PayloadTypeRegistry.clientboundPlay().register(
+				ConfigCheckPayload.TYPE,
+				ConfigCheckPayload.CODEC
+		);
+
+		ServerPlayConnectionEvents.JOIN.register(
+				(handler, sender, server) -> {
+					var player = handler.player;
+
+					if (!ServerPlayNetworking.canSend(
+							player,
+							ConfigCheckPayload.TYPE
+					)) {
+						return;
+					}
+
+					ServerPlayNetworking.send(
+							player,
+							new ConfigCheckPayload(
+									RecyclerConfig.getProcessingTimeTicks(),
+									RecoveryRule.getConfigurationFingerprint()
+							)
+					);
+				}
+		);
 
 		ServerLifecycleEvents.SERVER_STARTED.register(
 				server -> RecoveryRule.reload()
