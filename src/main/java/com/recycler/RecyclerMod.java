@@ -28,10 +28,19 @@ public class RecyclerMod implements ModInitializer {
 		ModBlocks.initialize();
 		ModMenuTypes.initialize();
 
+		RecyclerConfig.load();
 		RecoveryRule.initialize();
 
 		ServerLifecycleEvents.SERVER_STARTED.register(
 				server -> RecoveryRule.reload()
+		);
+		
+		ServerLifecycleEvents.END_DATA_PACK_RELOAD.register(
+				(server, resourceManager, success) -> {
+					if (success) {
+						RecyclerLogic.clearNetheriteRecipeCache();
+					}
+				}
 		);
 
 		CommandRegistrationCallback.EVENT.register(
@@ -140,7 +149,7 @@ public class RecyclerMod implements ModInitializer {
 					RecoveryRule.hasApplicableRule(input);
 
 			boolean hasSpecialHandling =
-					RecyclerLogic.isSpecialIngredientsForAudit(input);
+					RecyclerLogic.isSpecialIngredientsForAudit(level, input);
 
 			Optional<java.util.List<RecyclerLogic.PotentialOutput>> outputs =
 					RecyclerLogic.getPotentialOutputs(level, input);

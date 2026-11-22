@@ -23,9 +23,10 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.crafting.RecipeManager;
+import java.util.WeakHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -38,6 +39,15 @@ public final class RecyclerLogic {
 	public record PotentialOutput(ItemStack stack) {}
 
     private static final Random RANDOM = new Random();
+	
+	private static final Map<
+			RecipeManager,
+			Map<Item, Optional<List<ItemStack>>>
+	> NETHERITE_RECIPE_CACHE = new WeakHashMap<>();
+	
+	public static void clearNetheriteRecipeCache() {
+		NETHERITE_RECIPE_CACHE.clear();
+	}
 	
 	private static final TagKey<Item> STORAGE_BLOCKS =
         TagKey.create(
@@ -379,10 +389,38 @@ public final class RecyclerLogic {
 			return Optional.empty();
 		}
 
+		RecipeManager recipeManager =
+				level.getServer().getRecipeManager();
+
 		Item diamondItem = diamondEquivalent.get();
 
+		Map<Item, Optional<List<ItemStack>>> cache =
+				NETHERITE_RECIPE_CACHE.computeIfAbsent(
+						recipeManager,
+						manager -> new java.util.HashMap<>()
+				);
+
+		if (cache.containsKey(diamondItem)) {
+			return copyIngredientList(cache.get(diamondItem));
+		}
+
+		Optional<List<ItemStack>> ingredients =
+				findNetheriteIngredients(recipeManager, diamondItem);
+
+		cache.put(
+				diamondItem,
+				copyIngredientList(ingredients)
+		);
+
+		return copyIngredientList(ingredients);
+	}
+
+	private static Optional<List<ItemStack>> findNetheriteIngredients(
+			RecipeManager recipeManager,
+			Item diamondItem
+	) {
 		List<RecipeHolder<?>> recipes = new ArrayList<>(
-				level.getServer().getRecipeManager().getRecipes()
+				recipeManager.getRecipes()
 		);
 
 		recipes.sort(
@@ -445,6 +483,20 @@ public final class RecyclerLogic {
 		return Optional.empty();
 	}
 
+	private static Optional<List<ItemStack>> copyIngredientList(
+			Optional<List<ItemStack>> ingredients
+	) {
+		return ingredients.map(list -> {
+			List<ItemStack> copies = new ArrayList<>(list.size());
+
+			for (ItemStack stack : list) {
+				copies.add(stack.copy());
+			}
+
+			return copies;
+		});
+	}
+
 	private static Optional<Item> getDiamondEquivalent(ItemStack input) {
 		Identifier inputId =
 				BuiltInRegistries.ITEM.getKey(input.getItem());
@@ -461,18 +513,8 @@ public final class RecyclerLogic {
 
 		String equipment = path.substring("netherite_".length());
 
-		boolean supportedEquipment = switch (equipment) {
-			case "helmet", "chestplate", "leggings", "boots",
-					"sword", "pickaxe", "axe", "shovel", "hoe" -> true;
-			default -> false;
-		};
-
-		if (!supportedEquipment) {
-			return Optional.empty();
-		}
-
 		Identifier diamondId = Identifier.fromNamespaceAndPath(
-				"minecraft",
+				inputId.getNamespace(),
 				"diamond_" + equipment
 		);
 
@@ -1276,8 +1318,12 @@ public final class RecyclerLogic {
 				&& !RecoveryRule.hasApplicableRule(input);
 	}
 
-	public static boolean isSpecialIngredientsForAudit(ItemStack input) {
-		return getSpecialIngredients(input).isPresent();
+	public static boolean isSpecialIngredientsForAudit(
+			Level level,
+			ItemStack input
+	) {
+		return getSpecialIngredients(input).isPresent()
+				|| getNetheriteIngredients(level, input).isPresent();
 	}
 
 	public static Optional<List<PotentialOutput>> getPotentialOutputs(

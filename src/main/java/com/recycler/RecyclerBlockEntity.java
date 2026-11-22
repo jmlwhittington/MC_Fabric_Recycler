@@ -31,8 +31,6 @@ public class RecyclerBlockEntity extends BlockEntity
     public static final int OUTPUT_SLOTS = 6;
     public static final int INVENTORY_SIZE = 1 + OUTPUT_SLOTS;
 
-    public static final int PROCESSING_TIME = 100;
-
     private int processingTicks = 0;
     private boolean isProcessing = false;
 
@@ -211,12 +209,12 @@ public class RecyclerBlockEntity extends BlockEntity
 			blockEntity.setChanged();
 		}
 
-		if (blockEntity.processingTicks < PROCESSING_TIME) {
+		if (blockEntity.processingTicks < RecyclerConfig.getProcessingTimeTicks()) {
 			blockEntity.isProcessing = true;
 			blockEntity.processingTicks++;
 			blockEntity.setChanged();
 
-			if (blockEntity.processingTicks < PROCESSING_TIME) {
+			if (blockEntity.processingTicks < RecyclerConfig.getProcessingTimeTicks()) {
 				return;
 			}
 		}
@@ -382,7 +380,7 @@ public class RecyclerBlockEntity extends BlockEntity
         ContainerHelper.loadAllItems(input, items);
 
         processingTicks = input.getIntOr("ProcessingTicks", 0);
-        processingTicks = Math.max(0, Math.min(processingTicks, PROCESSING_TIME));
+        processingTicks = Math.max(0, Math.min(processingTicks, RecyclerConfig.getProcessingTimeTicks()));
 
         pendingRecovery = new ArrayList<>();
 
