@@ -47,16 +47,28 @@ public final class RecyclerLogic {
         );
 
 	private static final TagKey<Item> GENERIC_WOOD_TAG =
-			TagKey.create(
-					Registries.ITEM,
-					Identifier.withDefaultNamespace("planks")
-			);
+		TagKey.create(
+				Registries.ITEM,
+				Identifier.withDefaultNamespace("planks")
+		);
 
 	private static final TagKey<Item> GENERIC_STONE_TAG =
-			TagKey.create(
-					Registries.ITEM,
-					Identifier.withDefaultNamespace("stone_crafting_materials")
-			);
+		TagKey.create(
+				Registries.ITEM,
+				Identifier.withDefaultNamespace("stone_crafting_materials")
+		);
+
+	private static final TagKey<Item> LOGS_TAG =
+		TagKey.create(
+				Registries.ITEM,
+				Identifier.withDefaultNamespace("logs")
+		);
+
+	private static final TagKey<Item> WOODEN_SLABS_TAG =
+		TagKey.create(
+				Registries.ITEM,
+				Identifier.withDefaultNamespace("wooden_slabs")
+		);
 
     private RecyclerLogic() {
     }
@@ -200,32 +212,54 @@ public final class RecyclerLogic {
 		return ingredients;
 	}
 
-	private static boolean isWoodSpecificOutput(Item item) {
-		String path = BuiltInRegistries.ITEM.getKey(item).getPath();
+	private static Optional<Item> getWoodSpecificIngredient(
+			Ingredient ingredient,
+			Item resultItem
+	) {
+		Identifier resultId =
+				BuiltInRegistries.ITEM.getKey(resultItem);
 
-		String[] woodTypes = {
-				"oak",
-				"spruce",
-				"birch",
-				"jungle",
-				"acacia",
-				"dark_oak",
-				"mangrove",
-				"cherry",
-				"bamboo",
-				"crimson",
-				"warped",
-				"pale_oak",
-				"poplar"
-		};
+		String resultPath = resultId.getPath();
 
-		for (String wood : woodTypes) {
-			if (path.startsWith(wood + "_")) {
-				return true;
-			}
+		if (resultPath.startsWith("stripped_")) {
+			resultPath =
+					resultPath.substring("stripped_".length());
 		}
 
-		return false;
+		return ingredient.items()
+				.filter(holder -> holder.is(GENERIC_WOOD_TAG))
+				.filter(holder -> {
+					Identifier plankId =
+							BuiltInRegistries.ITEM.getKey(holder.value());
+
+					if (!plankId.getNamespace().equals(
+							resultId.getNamespace()
+					)) {
+						return false;
+					}
+
+					String plankPath = plankId.getPath();
+
+					if (!plankPath.endsWith("_planks")) {
+						return false;
+					}
+
+					String woodPrefix = plankPath.substring(
+							0,
+							plankPath.length() - "_planks".length()
+					);
+
+					return resultPath.startsWith(woodPrefix + "_");
+				})
+				.sorted(
+						Comparator.comparing(holder ->
+								BuiltInRegistries.ITEM
+										.getKey(holder.value())
+										.toString()
+						)
+				)
+				.map(Holder::value)
+				.findFirst();
 	}
 
 	private static Optional<Item> getWoodSpecificIngredient(
@@ -296,27 +330,26 @@ public final class RecyclerLogic {
 		};
 	}
 
+	private static boolean isTagIngredient(
+			Ingredient ingredient,
+			TagKey<Item> tag
+	) {
+		return ingredient.getValues()
+				.unwrapKey()
+				.filter(tag::equals)
+				.isPresent();
+	}
+
 	private static Optional<Item> getGenericIngredient(
 			Ingredient ingredient,
 			Item resultItem
 	) {
-		List<Holder<Item>> alternatives =
-				ingredient.items().toList();
-
-		if (alternatives.isEmpty()) {
-			return Optional.empty();
-		}
-
-		if (alternatives.stream().allMatch(
-				holder -> holder.is(GENERIC_WOOD_TAG)
-		) && !isWoodSpecificOutput(resultItem)) {
+		if (isTagIngredient(ingredient, GENERIC_WOOD_TAG)) {
 			return Optional.of(ModItems.GENERIC_WOOD);
 		}
 
 		if (!isGenericStoneExcludedOutput(resultItem)
-				&& alternatives.stream().allMatch(
-						holder -> holder.is(GENERIC_STONE_TAG)
-				)) {
+				&& isTagIngredient(ingredient, GENERIC_STONE_TAG)) {
 			return Optional.of(ModItems.GENERIC_STONE);
 		}
 
@@ -677,28 +710,25 @@ public final class RecyclerLogic {
 			Item resultItem,
 			List<Ingredient> recipeIngredients
 	) {
-		boolean slabRule = usesSlabRecoveryRule(resultItem);
-		boolean logRule = usesLogRecoveryRule(resultItem);
-
-		if (!slabRule && !logRule) {
-			return Optional.empty();
-		}
-
 		List<ItemStack> recoveredIngredients = new ArrayList<>();
 
 		int slabCount = 0;
+		int logCount = 0;
 
 		for (Ingredient ingredient : recipeIngredients) {
 
-			if (slabRule && isWoodSlabIngredient(ingredient)) {
+			if (isWoodSlabIngredient(ingredient)) {
 				slabCount++;
 				continue;
 			}
 
-			if (logRule && isWoodLogIngredient(ingredient)) {
+			if (isWoodLogIngredient(ingredient)) {
+				logCount++;
+
 				recoveredIngredients.add(
 						new ItemStack(ModItems.GENERIC_WOOD, 4)
 				);
+
 				continue;
 			}
 
@@ -717,7 +747,7 @@ public final class RecyclerLogic {
 			);
 		}
 
-		if (slabRule) {
+		if (slabCount > 0) {
 			recoveredIngredients.addAll(
 					createIngredients(
 							ModItems.GENERIC_WOOD,
@@ -729,30 +759,14 @@ public final class RecyclerLogic {
 		return Optional.of(recoveredIngredients);
 	}
 
-	private static boolean usesSlabRecoveryRule(Item resultItem) {
-		String path = BuiltInRegistries.ITEM.getKey(resultItem).getPath();
-
-		return switch (path) {
-			case "chiseled_bookshelf",
-				 "lectern",
-				 "daylight_detector",
-				 "composter",
-				 "barrel" -> true;
-
-			default -> false;
-		};
-	}
-
-	private static boolean usesLogRecoveryRule(Item resultItem) {
-		String path = BuiltInRegistries.ITEM.getKey(resultItem).getPath();
-
-		return switch (path) {
-			case "smoker",
-				 "campfire",
-				 "soul_campfire" -> true;
-
-			default -> false;
-		};
+	private static boolean usesRecipeSpecificRecovery(
+			List<Ingredient> ingredients
+	) {
+		return ingredients.stream().anyMatch(
+				ingredient ->
+						isWoodSlabIngredient(ingredient)
+						|| isWoodLogIngredient(ingredient)
+		);
 	}
 
 	private static boolean isWoodSlabIngredient(Ingredient ingredient) {
@@ -760,14 +774,9 @@ public final class RecyclerLogic {
 				ingredient.items().toList();
 
 		return !alternatives.isEmpty()
-				&& alternatives.stream().allMatch(holder -> {
-					String path = BuiltInRegistries.ITEM
-							.getKey(holder.value())
-							.getPath();
-
-					return path.endsWith("_slab")
-							&& isWoodSpecificOutput(holder.value());
-				});
+				&& alternatives.stream().allMatch(
+						holder -> holder.is(WOODEN_SLABS_TAG)
+				);
 	}
 
 	private static boolean isWoodLogIngredient(Ingredient ingredient) {
@@ -775,18 +784,53 @@ public final class RecyclerLogic {
 				ingredient.items().toList();
 
 		return !alternatives.isEmpty()
-				&& alternatives.stream().allMatch(holder -> {
-					String path = BuiltInRegistries.ITEM
-							.getKey(holder.value())
-							.getPath();
+				&& alternatives.stream().allMatch(holder ->
+						holder.is(LOGS_TAG)
+								|| isWoodLogItem(holder.value())
+				);
+	}
 
-					return (
-							path.endsWith("_log")
-							|| path.endsWith("_wood")
-							|| path.endsWith("_stem")
-							|| path.endsWith("_hyphae")
-					) && isWoodSpecificOutput(holder.value());
-				});
+	private static boolean isWoodLogItem(Item item) {
+		Identifier itemId =
+				BuiltInRegistries.ITEM.getKey(item);
+
+		String path = itemId.getPath();
+
+		if (path.startsWith("stripped_")) {
+			path = path.substring("stripped_".length());
+		}
+
+		String[] logSuffixes = {
+				"_log",
+				"_wood",
+				"_stem",
+				"_hyphae"
+		};
+
+		for (String suffix : logSuffixes) {
+			if (!path.endsWith(suffix)) {
+				continue;
+			}
+
+			String woodPrefix = path.substring(
+					0,
+					path.length() - suffix.length()
+			);
+
+			Identifier plankId =
+					Identifier.fromNamespaceAndPath(
+							itemId.getNamespace(),
+							woodPrefix + "_planks"
+					);
+
+			Optional<Item> planks =
+					BuiltInRegistries.ITEM.getOptional(plankId);
+
+			return planks.isPresent()
+					&& new ItemStack(planks.get()).is(GENERIC_WOOD_TAG);
+		}
+
+		return false;
 	}
 
 	private static Optional<List<ItemStack>> getMultiOutputIngredients(
@@ -1012,7 +1056,7 @@ public final class RecyclerLogic {
 				}
 
 				if (result.getCount() == 1
-						&& usesRecipeSpecificRecovery(result.getItem())) {
+						&& usesRecipeSpecificRecovery(ingredients)) {
 
 					if (getRecipeSpecificIngredients(
 							result.getItem(),
@@ -1161,7 +1205,7 @@ public final class RecyclerLogic {
 									recipeIngredients
 							);
 
-					if (usesRecipeSpecificRecovery(result.getItem())) {
+					if (usesRecipeSpecificRecovery(recipeIngredients)) {
 						if (recipeSpecificIngredients.isEmpty()) {
 							continue;
 						}
@@ -1327,7 +1371,7 @@ public final class RecyclerLogic {
 									recipeIngredients
 							);
 
-					if (usesRecipeSpecificRecovery(result.getItem())) {
+					if (usesRecipeSpecificRecovery(recipeIngredients)) {
 						if (recipeSpecificIngredients.isEmpty()) {
 							continue;
 						}
