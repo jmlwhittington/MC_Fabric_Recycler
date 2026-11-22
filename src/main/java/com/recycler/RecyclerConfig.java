@@ -34,47 +34,53 @@ public final class RecyclerConfig {
     private RecyclerConfig() {
     }
 
-    public static void load() {
-        try {
-            Files.createDirectories(CONFIG_PATH.getParent());
+	public static boolean load() {
+		try {
+			Files.createDirectories(CONFIG_PATH.getParent());
 
-            if (!Files.exists(CONFIG_PATH)) {
-                saveDefaultConfig();
-                return;
-            }
+			if (!Files.exists(CONFIG_PATH)) {
+				saveDefaultConfig();
+				return true;
+			}
 
-            JsonObject json = GSON.fromJson(
-                    Files.readString(CONFIG_PATH),
-                    JsonObject.class
-            );
+			JsonObject json = GSON.fromJson(
+					Files.readString(CONFIG_PATH),
+					JsonObject.class
+			);
 
-            if (json == null || !json.has("processing_time_ticks")
-                    || !json.get("processing_time_ticks").isJsonPrimitive()
-                    || !json.getAsJsonPrimitive("processing_time_ticks").isNumber()) {
-                throw new JsonParseException(
-                        "Missing or invalid processing_time_ticks"
-                );
-            }
+			if (json == null || !json.has("processing_time_ticks")
+					|| !json.get("processing_time_ticks").isJsonPrimitive()
+					|| !json.getAsJsonPrimitive("processing_time_ticks").isNumber()) {
+				throw new JsonParseException(
+						"Missing or invalid processing_time_ticks"
+				);
+			}
 
 			BigDecimal configuredValue = json
 					.getAsJsonPrimitive("processing_time_ticks")
 					.getAsBigDecimal();
 
 			if (configuredValue.stripTrailingZeros().scale() > 0
-					|| configuredValue.compareTo(BigDecimal.ONE) < 0
-					|| configuredValue.compareTo(BigDecimal.valueOf(Integer.MAX_VALUE)) > 0) {
+					|| configuredValue.compareTo(
+							BigDecimal.valueOf(MIN_PROCESSING_TIME_TICKS)
+					) < 0
+					|| configuredValue.compareTo(
+							BigDecimal.valueOf(Integer.MAX_VALUE)
+					) > 0) {
 				throw new JsonParseException(
-						"processing_time_ticks must be a whole number between 1 and "
+						"processing_time_ticks must be a whole number between "
+								+ MIN_PROCESSING_TIME_TICKS
+								+ " and "
 								+ Integer.MAX_VALUE
 				);
 			}
 
-			int configuredTime = configuredValue.intValueExact();
+			processingTimeTicks = configuredValue.intValueExact();
 
-			processingTimeTicks = configuredTime;
+			return true;
 
-        } catch (IOException | JsonParseException | NumberFormatException e) {
-            processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
+		} catch (IOException | JsonParseException | NumberFormatException e) {
+			processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
 
 			LOGGER.error(
 					"Failed to load config from {}. Using default processing time of {} ticks.",
@@ -82,8 +88,10 @@ public final class RecyclerConfig {
 					DEFAULT_PROCESSING_TIME_TICKS,
 					e
 			);
-        }
-    }
+
+			return false;
+		}
+	}
 
     private static void saveDefaultConfig() throws IOException {
         JsonObject json = new JsonObject();

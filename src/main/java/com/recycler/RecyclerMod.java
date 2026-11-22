@@ -55,12 +55,10 @@ public class RecyclerMod implements ModInitializer {
 									.then(
 											Commands.literal("reload")
 													.executes(context -> {
-														RecyclerConfig.load();
-														
-														boolean success =
-																RecoveryRule.reload();
+														boolean configSuccess = RecyclerConfig.load();
+														boolean rulesSuccess = RecoveryRule.reload();
 
-														if (success) {
+														if (configSuccess && rulesSuccess) {
 															context.getSource().sendSuccess(
 																	() -> Component.literal(
 																			"Recycler configuration and recovery rules reloaded successfully."
@@ -71,10 +69,22 @@ public class RecyclerMod implements ModInitializer {
 															return Command.SINGLE_SUCCESS;
 														}
 
+														String message = "Recycler reload incomplete. ";
+
+														if (!configSuccess) {
+															message += "Configuration failed to load; using default processing time. ";
+														} else {
+															message += "Configuration reloaded successfully. ";
+														}
+
+														if (!rulesSuccess) {
+															message += "Recovery rules failed to reload. Check latest.log.";
+														} else {
+															message += "Recovery rules reloaded successfully.";
+														}
+
 														context.getSource().sendFailure(
-																Component.literal(
-																		"Failed to reload Recycler recovery rules. Check latest.log."
-																)
+																Component.literal(message)
 														);
 
 														return 0;

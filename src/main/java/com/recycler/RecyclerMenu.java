@@ -20,7 +20,7 @@ public class RecyclerMenu extends AbstractContainerMenu {
     private final Container container;
 
 	private final RecyclerBlockEntity blockEntity;
-	private final int[] machineData = new int[1];
+	private final int[] machineData = new int[2];
 
     public RecyclerMenu(int containerId, Inventory playerInventory) {
         this(
@@ -49,6 +49,7 @@ public class RecyclerMenu extends AbstractContainerMenu {
 				: null;
 
 		addDataSlot(DataSlot.shared(machineData, 0));
+		addDataSlot(DataSlot.shared(machineData, 1));
 
         container.startOpen(playerInventory.player);
 
@@ -93,14 +94,26 @@ public class RecyclerMenu extends AbstractContainerMenu {
 	public void broadcastChanges() {
 		if (blockEntity != null) {
 			machineData[0] = blockEntity.getProcessingTicks();
+			machineData[1] = RecyclerConfig.getProcessingTimeTicks();
 		}
 
 		super.broadcastChanges();
 	}
 
 	public float getProgress() {
-		return Math.min(1.0F,
-				Math.max(0.0F, machineData[0] / (float) RecyclerConfig.getProcessingTimeTicks()));
+		int processingTime = machineData[1];
+
+		if (processingTime <= 0) {
+			return 0.0F;
+		}
+
+		return Math.min(
+				1.0F,
+				Math.max(
+						0.0F,
+						machineData[0] / (float) processingTime
+				)
+		);
 	}
 
     @Override
