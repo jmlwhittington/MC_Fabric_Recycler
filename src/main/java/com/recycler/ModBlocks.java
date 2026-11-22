@@ -36,6 +36,8 @@ public final class ModBlocks {
 					.icon(() -> new ItemStack(RECYCLER))
 					.displayItems((parameters, output) -> {
 						output.accept(RECYCLER);
+					    output.accept(ModItems.GENERIC_WOOD);
+						output.accept(ModItems.GENERIC_STONE);
 					})
 					.build();
 

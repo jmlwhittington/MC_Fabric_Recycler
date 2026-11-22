@@ -49,6 +49,18 @@ public final class RecyclerLogic {
                 Identifier.fromNamespaceAndPath("c", "storage_blocks")
         );
 
+	private static final TagKey<Item> GENERIC_WOOD_TAG =
+			TagKey.create(
+					Registries.ITEM,
+					Identifier.withDefaultNamespace("planks")
+			);
+
+	private static final TagKey<Item> GENERIC_STONE_TAG =
+			TagKey.create(
+					Registries.ITEM,
+					Identifier.withDefaultNamespace("stone_crafting_materials")
+			);
+
     private RecyclerLogic() {
     }
 	
@@ -191,6 +203,74 @@ public final class RecyclerLogic {
 		return ingredients;
 	}
 
+	private static boolean isWoodSpecificOutput(Item item) {
+		String path = BuiltInRegistries.ITEM.getKey(item).getPath();
+
+		String[] woodTypes = {
+				"oak",
+				"spruce",
+				"birch",
+				"jungle",
+				"acacia",
+				"dark_oak",
+				"mangrove",
+				"cherry",
+				"bamboo",
+				"crimson",
+				"warped",
+				"pale_oak"
+		};
+
+		for (String wood : woodTypes) {
+			if (path.startsWith(wood + "_")) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static Optional<Item> getGenericIngredient(
+			Ingredient ingredient,
+			Item resultItem
+	) {
+		if (ingredient.items().allMatch(
+				holder -> holder.is(GENERIC_WOOD_TAG)
+		) && !isWoodSpecificOutput(resultItem)) {
+			return Optional.of(ModItems.GENERIC_WOOD);
+		}
+
+		if (ingredient.items().allMatch(
+				holder -> holder.is(GENERIC_STONE_TAG)
+		)) {
+			return Optional.of(ModItems.GENERIC_STONE);
+		}
+
+		return Optional.empty();
+	}
+
+	private static Optional<Item> getRepresentativeIngredient(
+			Ingredient ingredient,
+			Item resultItem
+	) {
+		Optional<Item> generic =
+				getGenericIngredient(ingredient, resultItem);
+
+		if (generic.isPresent()) {
+			return generic;
+		}
+
+		return ingredient.items()
+				.sorted(
+						Comparator.comparing(itemHolder ->
+								BuiltInRegistries.ITEM
+										.getKey(itemHolder.value())
+										.toString()
+						)
+				)
+				.map(Holder::value)
+				.findFirst();
+	}
 
 	private static Optional<List<ItemStack>> getSpecialIngredients(
 			ItemStack input
@@ -203,6 +283,12 @@ public final class RecyclerLogic {
 		if (item == Items.NAME_TAG) {
 			return Optional.of(
 					createIngredients(Items.PAPER, 1)
+			);
+		}
+
+		if (item == Items.PAINTING) {
+			return Optional.of(
+					createIngredients(Items.STICK, 8)
 			);
 		}
 
@@ -531,6 +617,37 @@ public final class RecyclerLogic {
 			}
 		}
 
+		Optional<Item> genericIngredient =
+				getGenericIngredient(
+						ingredients.get(0),
+						lookupItem
+				);
+
+		if (genericIngredient.isPresent()) {
+			boolean allGeneric = ingredients.stream().allMatch(
+					ingredient ->
+							getGenericIngredient(ingredient, lookupItem)
+									.filter(genericIngredient.get()::equals)
+									.isPresent()
+			);
+
+			if (allGeneric) {
+				int ingredientCost =
+						ingredients.size() / outputCount;
+
+				if (path.equals("copper_trapdoor")) {
+					ingredientCost = 4;
+				}
+
+				return Optional.of(
+						createIngredients(
+								genericIngredient.get(),
+								ingredientCost
+						)
+				);
+			}
+		}
+
 		Optional<Holder<Item>> representative =
 				ingredients.get(0).items()
 						.sorted(
@@ -664,21 +781,11 @@ public final class RecyclerLogic {
                 boolean validIngredients = true;
 
                 for (Ingredient ingredient : ingredients) {
-                    Optional<Holder<Item>> representative =
-                            ingredient.items()
-                                    .sorted(
-                                            Comparator.comparing(itemHolder ->
-                                                    BuiltInRegistries.ITEM
-                                                            .getKey(itemHolder.value())
-                                                            .toString()
-                                            )
-                                    )
-                                    .filter(itemHolder ->
-                                            ingredient.test(
-                                                    new ItemStack(itemHolder.value())
-                                            )
-                                    )
-                                    .findFirst();
+					Optional<Item> representative =
+							getRepresentativeIngredient(
+									ingredient,
+									result.getItem()
+							);
 
                     if (representative.isEmpty()) {
                         validIngredients = false;
@@ -807,21 +914,11 @@ public final class RecyclerLogic {
 					boolean validIngredients = true;
 
 					for (Ingredient ingredient : recipeIngredients) {
-						Optional<Holder<Item>> representative =
-								ingredient.items()
-										.sorted(
-												Comparator.comparing(itemHolder ->
-														BuiltInRegistries.ITEM
-																.getKey(itemHolder.value())
-																.toString()
-												)
-										)
-										.filter(itemHolder ->
-												ingredient.test(
-														new ItemStack(itemHolder.value())
-												)
-										)
-										.findFirst();
+						Optional<Item> representative =
+								getRepresentativeIngredient(
+										ingredient,
+										result.getItem()
+								);
 
 						if (representative.isEmpty()) {
 							validIngredients = false;
@@ -829,7 +926,7 @@ public final class RecyclerLogic {
 						}
 
 						ingredients.add(
-								new ItemStack(representative.get().value())
+								new ItemStack(representative.get())
 						);
 					}
 
@@ -862,160 +959,150 @@ public final class RecyclerLogic {
         return Optional.empty();
     }
 
-public static boolean isProtectedInputForAudit(ItemStack input) {
-    return isProtectedInput(input);
-}
+	public static boolean isProtectedInputForAudit(ItemStack input) {
+		return isProtectedInput(input);
+	}
 
-public static boolean isSpecialIngredientsForAudit(ItemStack input) {
-    return getSpecialIngredients(input).isPresent();
-}
+	public static boolean isSpecialIngredientsForAudit(ItemStack input) {
+		return getSpecialIngredients(input).isPresent();
+	}
 
-public static Optional<List<PotentialOutput>> getPotentialOutputs(
-        Level level,
-        ItemStack input
-) {
-    if (level == null
-            || level.isClientSide()
-            || level.getServer() == null
-            || input == null
-            || input.isEmpty()
-            || isProtectedInput(input)) {
-        return Optional.empty();
-    }
+	public static Optional<List<PotentialOutput>> getPotentialOutputs(
+			Level level,
+			ItemStack input
+	) {
+		if (level == null
+				|| level.isClientSide()
+				|| level.getServer() == null
+				|| input == null
+				|| input.isEmpty()
+				|| isProtectedInput(input)) {
+			return Optional.empty();
+		}
 
-    Optional<List<RecoveryRule.PotentialRuleOutput>> ruleResults =
-            RecoveryRule.getPotentialRecoveryResult(input);
+		Optional<List<RecoveryRule.PotentialRuleOutput>> ruleResults =
+				RecoveryRule.getPotentialRecoveryResult(input);
 
-    if (ruleResults.isPresent()) {
-        List<PotentialOutput> outputs = new ArrayList<>();
+		if (ruleResults.isPresent()) {
+			List<PotentialOutput> outputs = new ArrayList<>();
 
-        for (RecoveryRule.PotentialRuleOutput result : ruleResults.get()) {
-            outputs.add(
-                    new PotentialOutput(
-                            result.stack().copy(),
-                            result.chance()
-                    )
-            );
-        }
+			for (RecoveryRule.PotentialRuleOutput result : ruleResults.get()) {
+				outputs.add(
+						new PotentialOutput(
+								result.stack().copy(),
+								result.chance()
+						)
+				);
+			}
 
-        return Optional.of(outputs);
-    }
+			return Optional.of(outputs);
+		}
 
-    Optional<List<ItemStack>> specialIngredients =
-            getSpecialIngredients(input);
+		Optional<List<ItemStack>> specialIngredients =
+				getSpecialIngredients(input);
 
-    if (specialIngredients.isPresent()) {
-        return Optional.of(
-                calculatePotentialOutputs(specialIngredients.get())
-        );
-    }
+		if (specialIngredients.isPresent()) {
+			return Optional.of(
+					calculatePotentialOutputs(specialIngredients.get())
+			);
+		}
 
-    Item recipeInput = getRecipeLookupItem(input);
+		Item recipeInput = getRecipeLookupItem(input);
 
-    List<RecipeHolder<?>> recipes = new ArrayList<>(
-            level.getServer().getRecipeManager().getRecipes()
-    );
+		List<RecipeHolder<?>> recipes = new ArrayList<>(
+				level.getServer().getRecipeManager().getRecipes()
+		);
 
-    recipes.sort(
-            Comparator.comparing(
-                    recipeHolder ->
-                            recipeHolder.id().identifier().toString()
-            )
-    );
+		recipes.sort(
+				Comparator.comparing(
+						recipeHolder ->
+								recipeHolder.id().identifier().toString()
+				)
+		);
 
-    for (RecipeHolder<?> holder : recipes) {
-        Recipe<?> recipe = holder.value();
+		for (RecipeHolder<?> holder : recipes) {
+			Recipe<?> recipe = holder.value();
 
-        if (recipe.getClass() != ShapedRecipe.class
-                && recipe.getClass() != ShapelessRecipe.class) {
-            continue;
-        }
+			if (recipe.getClass() != ShapedRecipe.class
+					&& recipe.getClass() != ShapelessRecipe.class) {
+				continue;
+			}
 
-        if (recipe.getType() != RecipeType.CRAFTING) {
-            continue;
-        }
+			if (recipe.getType() != RecipeType.CRAFTING) {
+				continue;
+			}
 
-        try {
-            ItemStack result = getStaticResult(recipe);
+			try {
+				ItemStack result = getStaticResult(recipe);
 
-            if (result.isEmpty()
-                    || result.getItem() != recipeInput) {
-                continue;
-            }
+				if (result.isEmpty()
+						|| result.getItem() != recipeInput) {
+					continue;
+				}
 
-            NormalCraftingRecipe craftingRecipe =
-                    (NormalCraftingRecipe) recipe;
+				NormalCraftingRecipe craftingRecipe =
+						(NormalCraftingRecipe) recipe;
 
-            List<Ingredient> recipeIngredients =
-                    craftingRecipe.placementInfo().ingredients();
+				List<Ingredient> recipeIngredients =
+						craftingRecipe.placementInfo().ingredients();
 
-            if (recipeIngredients.size() <= 1) {
-                continue;
-            }
+				if (recipeIngredients.size() <= 1) {
+					continue;
+				}
 
-            List<ItemStack> ingredients;
+				List<ItemStack> ingredients;
 
-            if (result.getCount() == 1) {
-                ingredients = new ArrayList<>(recipeIngredients.size());
+				if (result.getCount() == 1) {
+					ingredients = new ArrayList<>(recipeIngredients.size());
 
-                boolean validIngredients = true;
+					boolean validIngredients = true;
 
-                for (Ingredient ingredient : recipeIngredients) {
-                    Optional<Holder<Item>> representative =
-                            ingredient.items()
-                                    .sorted(
-                                            Comparator.comparing(itemHolder ->
-                                                    BuiltInRegistries.ITEM
-                                                            .getKey(itemHolder.value())
-                                                            .toString()
-                                            )
-                                    )
-                                    .filter(itemHolder ->
-                                            ingredient.test(
-                                                    new ItemStack(itemHolder.value())
-                                            )
-                                    )
-                                    .findFirst();
+					for (Ingredient ingredient : recipeIngredients) {
+						Optional<Item> representative =
+								getRepresentativeIngredient(
+										ingredient,
+										result.getItem()
+								);
 
-                    if (representative.isEmpty()) {
-                        validIngredients = false;
-                        break;
-                    }
+						if (representative.isEmpty()) {
+							validIngredients = false;
+							break;
+						}
 
-                    ingredients.add(
-                            new ItemStack(representative.get().value())
-                    );
-                }
+						ingredients.add(
+								new ItemStack(representative.get())
+						);
+					}
 
-                if (!validIngredients) {
-                    continue;
-                }
+					if (!validIngredients) {
+						continue;
+					}
 
-            } else {
-                Optional<List<ItemStack>> multiOutputIngredients =
-                        getMultiOutputIngredients(
-                                input.getItem(),
-                                result.getCount(),
-                                recipeIngredients
-                        );
+				} else {
+					Optional<List<ItemStack>> multiOutputIngredients =
+							getMultiOutputIngredients(
+									input.getItem(),
+									result.getCount(),
+									recipeIngredients
+							);
 
-                if (multiOutputIngredients.isEmpty()) {
-                    continue;
-                }
+					if (multiOutputIngredients.isEmpty()) {
+						continue;
+					}
 
-                ingredients = multiOutputIngredients.get();
-            }
+					ingredients = multiOutputIngredients.get();
+				}
 
-            return Optional.of(
-                    calculatePotentialOutputs(ingredients)
-            );
+				return Optional.of(
+						calculatePotentialOutputs(ingredients)
+				);
 
-        } catch (RuntimeException exception) {
-        }
-    }
+			} catch (RuntimeException exception) {
+			}
+		}
 
-    return Optional.empty();
-}
+		return Optional.empty();
+	}
 
 	private static List<PotentialOutput> calculatePotentialOutputs(
 			List<ItemStack> ingredients
