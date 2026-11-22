@@ -12,6 +12,10 @@ public final class ModItems {
     public static final Item GENERIC_WOOD = register("generic_wood");
 
     public static final Item GENERIC_STONE = register("generic_stone");
+	
+	public static final Item GLASS_SHARDS = register("glass_shards");
+
+	public static final Item CULLET = register("cullet");
 
     private ModItems() {
     }

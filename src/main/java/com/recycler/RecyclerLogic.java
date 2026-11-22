@@ -521,6 +521,160 @@ public final class RecyclerLogic {
 		return BuiltInRegistries.ITEM.getOptional(diamondId);
 	}
 
+	private static Optional<Item> getWoodPlanks(
+			Identifier inputId,
+			String suffix
+	) {
+		String path = inputId.getPath();
+
+		if (!path.endsWith(suffix)) {
+			return Optional.empty();
+		}
+
+		String wood = path.substring(
+				0,
+				path.length() - suffix.length()
+		);
+
+		Identifier plankId = Identifier.fromNamespaceAndPath(
+				inputId.getNamespace(),
+				wood + "_planks"
+		);
+
+		return BuiltInRegistries.ITEM.getOptional(plankId);
+	}
+
+	private static boolean isStairOrSlab(Item item) {
+		String path = BuiltInRegistries.ITEM.getKey(item).getPath();
+
+		return path.endsWith("_stairs")
+				|| path.endsWith("_slab");
+	}
+
+	private static Optional<Item> getStairSlabSourceItem(Item item) {
+		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
+		String path = inputId.getPath();
+
+		String suffix;
+
+		if (path.endsWith("_stairs")) {
+			suffix = "_stairs";
+		} else if (path.endsWith("_slab")) {
+			suffix = "_slab";
+		} else {
+			return Optional.empty();
+		}
+
+		List<String> candidates = new ArrayList<>();
+
+		candidates.add(base + "s");
+
+		candidates.add(base);
+
+		candidates.add(base + "_planks");
+
+		candidates.add(base + "_block");
+
+		for (String candidate : candidates) {
+			Identifier candidateId = Identifier.fromNamespaceAndPath(
+					inputId.getNamespace(),
+					candidate
+			);
+
+			Optional<Item> source =
+					BuiltInRegistries.ITEM.getOptional(candidateId);
+
+			if (source.isPresent()) {
+				return source;
+			}
+		}
+
+		return Optional.empty();
+	}
+
+	private static Optional<List<ItemStack>> getRecipeIngredientsForOutput(
+			Level level,
+			Item outputItem,
+			Item ingredientContext
+	) {
+		List<RecipeHolder<?>> recipes = new ArrayList<>(
+				level.getServer().getRecipeManager().getRecipes()
+		);
+
+		recipes.sort(
+				Comparator.comparing(
+						holder -> holder.id().identifier().toString()
+				)
+		);
+
+		for (RecipeHolder<?> holder : recipes) {
+			Recipe<?> recipe = holder.value();
+
+			if (recipe.getClass() != ShapedRecipe.class
+					&& recipe.getClass() != ShapelessRecipe.class) {
+				continue;
+			}
+
+			if (recipe.getType() != RecipeType.CRAFTING) {
+				continue;
+			}
+
+			try {
+				ItemStack result = getStaticResult(recipe);
+
+				if (result.isEmpty()
+						|| result.getItem() != outputItem) {
+					continue;
+				}
+
+				if (result.getCount() == 1) {
+					NormalCraftingRecipe craftingRecipe =
+							(NormalCraftingRecipe) recipe;
+
+					if (craftingRecipe.placementInfo()
+							.ingredients().size() <= 1) {
+						continue;
+					}
+				}
+
+				NormalCraftingRecipe craftingRecipe =
+						(NormalCraftingRecipe) recipe;
+
+				List<Ingredient> ingredients =
+						craftingRecipe.placementInfo().ingredients();
+
+				Optional<List<ItemStack>> recovered =
+						getRecipeIngredients(
+								ingredientContext,
+								result.getCount(),
+								ingredients
+						);
+
+				if (recovered.isPresent()) {
+					return recovered;
+				}
+
+			} catch (RuntimeException exception) {
+			}
+		}
+
+		return Optional.empty();
+	}
+
+	private static double getStairSlabChance(Item item) {
+		String path = BuiltInRegistries.ITEM.getKey(item).getPath();
+
+		if (path.endsWith("_stairs")) {
+			return 0.75;
+		}
+
+		if (path.endsWith("_slab")) {
+			return 0.50;
+		}
+
+		return 0.0;
+	}
+
 	private static Optional<List<ItemStack>> getSpecialIngredients(
 			ItemStack input
 	) {
@@ -528,6 +682,162 @@ public final class RecyclerLogic {
 
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
+		
+		if (item == Items.BOWL) {
+			return Optional.of(
+					createIngredients(Items.STICK, 3)
+			);
+		}
+
+		if (path.endsWith("_fence")
+				&& !path.equals("nether_brick_fence")) {
+
+			Optional<Item> planks = getWoodPlanks(
+					inputId,
+					"_fence"
+			);
+
+			if (planks.isPresent()) {
+				List<ItemStack> ingredients = new ArrayList<>();
+
+				ingredients.addAll(
+						createIngredients(planks.get(), 1)
+				);
+
+				ingredients.addAll(
+						createIngredients(Items.STICK, 2)
+				);
+
+				return Optional.of(ingredients);
+			}
+		}
+
+		if (path.equals("nether_brick_fence")) {
+			List<ItemStack> ingredients = new ArrayList<>();
+
+			ingredients.addAll(
+					createIngredients(Items.NETHER_BRICKS, 1)
+			);
+
+			ingredients.addAll(
+					createIngredients(Items.NETHER_BRICK, 2)
+			);
+
+			return Optional.of(ingredients);
+		}
+
+		if (item == Items.LADDER) {
+			return Optional.of(
+					createIngredients(Items.STICK, 2)
+			);
+		}
+
+		if (item == Items.TRIPWIRE_HOOK) {
+			List<ItemStack> ingredients = new ArrayList<>();
+
+			ingredients.addAll(
+					createIngredients(Items.IRON_NUGGET, 4)
+			);
+
+			ingredients.addAll(
+					createIngredients(Items.STICK, 2)
+			);
+
+			return Optional.of(ingredients);
+		}
+
+		if (item == Items.RAIL) {
+			return Optional.of(
+					createIngredients(Items.IRON_NUGGET, 3)
+			);
+		}
+
+		if (item == Items.ACTIVATOR_RAIL
+				|| item == Items.DETECTOR_RAIL) {
+			return Optional.of(
+					createIngredients(Items.IRON_INGOT, 1)
+			);
+		}
+
+		if (item == Items.POWERED_RAIL) {
+			return Optional.of(
+					createIngredients(Items.GOLD_INGOT, 1)
+			);
+		}
+
+		if (path.endsWith("_hanging_sign")) {
+			Optional<Item> planks = getWoodPlanks(
+					inputId,
+					"_hanging_sign"
+			);
+
+			if (planks.isPresent()) {
+				List<ItemStack> ingredients = new ArrayList<>();
+
+				ingredients.addAll(
+						createIngredients(planks.get(), 4)
+				);
+
+				ingredients.addAll(
+						createIngredients(Items.IRON_NUGGET, 3)
+				);
+
+				return Optional.of(ingredients);
+			}
+		}
+
+		if (path.endsWith("_sign")
+				&& !path.endsWith("_hanging_sign")) {
+
+			Optional<Item> planks = getWoodPlanks(
+					inputId,
+					"_sign"
+			);
+
+			if (planks.isPresent()) {
+				return Optional.of(
+						createIngredients(planks.get(), 2)
+				);
+			}
+		}
+
+		if (path.endsWith("straw_bed")) {
+			return Optional.of(
+					createIngredients(Items.WHEAT, 6)
+			);
+		}
+
+		String copperPath = path;
+
+		if (copperPath.startsWith("waxed_")) {
+			copperPath = copperPath.substring("waxed_".length());
+		}
+
+		if (copperPath.startsWith("exposed_")) {
+			copperPath = copperPath.substring("exposed_".length());
+		} else if (copperPath.startsWith("weathered_")) {
+			copperPath = copperPath.substring("weathered_".length());
+		} else if (copperPath.startsWith("oxidized_")) {
+			copperPath = copperPath.substring("oxidized_".length());
+		}
+
+		if (copperPath.equals("copper_bulb")) {
+			return Optional.of(
+					createIngredients(Items.COPPER_INGOT, 6)
+			);
+		}
+
+		if (path.equals("iron_bars")) {
+			return Optional.of(
+					createIngredients(Items.IRON_NUGGET, 3)
+			);
+		}
+
+		if (copperPath.equals("copper_bars")) {
+			return Optional.of(
+					createIngredients(Items.COPPER_NUGGET, 3)
+			);
+		}
 
 		if (item == Items.NAME_TAG) {
 			return Optional.of(
@@ -1089,6 +1399,21 @@ public final class RecyclerLogic {
 			return true;
 		}
 
+		if (isStairOrSlab(input.getItem())) {
+			Optional<Item> source =
+					getStairSlabSourceItem(input.getItem());
+
+			if (source.isEmpty()) {
+				return false;
+			}
+
+			return getRecipeIngredientsForOutput(
+					level,
+					source.get(),
+					source.get()
+			).isPresent();
+		}
+
 		Item recipeInput = getRecipeLookupItem(input);
 		
 		if (isDyedShulkerBox(input)
@@ -1219,6 +1544,36 @@ public final class RecyclerLogic {
 		if (specialIngredients.isPresent()) {
 			return Optional.of(
 					rollRecovery(specialIngredients.get())
+			);
+		}
+
+		if (isStairOrSlab(input.getItem())) {
+			Optional<Item> source =
+					getStairSlabSourceItem(input.getItem());
+
+			if (source.isEmpty()) {
+				return Optional.empty();
+			}
+
+			Optional<List<ItemStack>> sourceIngredients =
+					getRecipeIngredientsForOutput(
+							level,
+							source.get(),
+							source.get()
+					);
+
+			if (sourceIngredients.isEmpty()) {
+				return Optional.empty();
+			}
+
+			double chance = getStairSlabChance(input.getItem());
+
+			if (RANDOM.nextDouble() >= chance) {
+				return Optional.of(new ArrayList<>());
+			}
+
+			return Optional.of(
+					rollRecovery(sourceIngredients.get())
 			);
 		}
 
@@ -1381,6 +1736,30 @@ public final class RecyclerLogic {
 		if (specialIngredients.isPresent()) {
 			return Optional.of(
 					calculatePotentialOutputs(specialIngredients.get())
+			);
+		}
+
+		if (isStairOrSlab(input.getItem())) {
+			Optional<Item> source =
+					getStairSlabSourceItem(input.getItem());
+
+			if (source.isEmpty()) {
+				return Optional.empty();
+			}
+
+			Optional<List<ItemStack>> sourceIngredients =
+					getRecipeIngredientsForOutput(
+							level,
+							source.get(),
+							source.get()
+					);
+
+			if (sourceIngredients.isEmpty()) {
+				return Optional.empty();
+			}
+
+			return Optional.of(
+					calculatePotentialOutputs(sourceIngredients.get())
 			);
 		}
 

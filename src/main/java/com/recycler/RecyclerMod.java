@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -15,11 +16,20 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
 import com.mojang.brigadier.Command;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 
 public class RecyclerMod implements ModInitializer {
 
@@ -28,6 +38,7 @@ public class RecyclerMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModItems.initialize();
+		registerGlassShardDrops();
 		ModBlocks.initialize();
 		ModMenuTypes.initialize();
 
@@ -129,6 +140,52 @@ public class RecyclerMod implements ModInitializer {
 													)
 									)
 					);
+				}
+		);
+	}
+	
+	private static void registerGlassShardDrops() {
+		Map<ResourceKey<LootTable>, Float> glassDrops = new HashMap<>();
+
+		for (Block block : BuiltInRegistries.BLOCK) {
+			Identifier blockId = BuiltInRegistries.BLOCK.getKey(block);
+
+			if (!"minecraft".equals(blockId.getNamespace())) {
+				continue;
+			}
+
+			String path = blockId.getPath();
+
+			float chance;
+
+			if (path.equals("glass")
+					|| path.matches("[a-z]+_stained_glass")) {
+				chance = 0.25f;
+			} else if (path.equals("glass_pane")
+					|| path.matches("[a-z]+_stained_glass_pane")) {
+				chance = 0.09375f;
+			} else {
+				continue;
+			}
+
+			block.getLootTable().ifPresent(
+					lootTable -> glassDrops.put(lootTable, chance)
+			);
+		}
+
+		LootTableEvents.MODIFY.register(
+				(key, tableBuilder, source, registries) -> {
+					Float chance = glassDrops.get(key);
+
+					if (chance == null) {
+						return;
+					}
+
+					LootPool.Builder pool = LootPool.lootPool()
+							.add(LootItem.lootTableItem(ModItems.GLASS_SHARDS))
+							.when(LootItemRandomChanceCondition.randomChance(chance));
+
+					tableBuilder.withPool(pool);
 				}
 		);
 	}

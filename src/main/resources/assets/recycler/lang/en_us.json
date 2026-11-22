@@ -3,4 +3,6 @@
   "itemGroup.recycler.recycler": "Recycler",
   "item.recycler.generic_wood": "Generic Wood",
   "item.recycler.generic_stone": "Generic Stone"
+  "item.recycler.glass_shards": "Glass Shards",
+  "item.recycler.cullet": "Cullet"
 }

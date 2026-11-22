@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SS",
+    "SS"
+  ],
+  "key": {
+    "S": "recycler:glass_shards"
+  },
+  "result": {
+    "id": "recycler:cullet",
+    "count": 1
+  }
+}
