@@ -262,54 +262,6 @@ public final class RecyclerLogic {
 				.findFirst();
 	}
 
-	private static Optional<Item> getWoodSpecificIngredient(
-			Ingredient ingredient,
-			Item resultItem
-	) {
-		Identifier resultId =
-				BuiltInRegistries.ITEM.getKey(resultItem);
-
-		String path = resultId.getPath();
-
-		String[] woodTypes = {
-				"oak",
-				"spruce",
-				"birch",
-				"jungle",
-				"acacia",
-				"dark_oak",
-				"mangrove",
-				"cherry",
-				"bamboo",
-				"crimson",
-				"warped",
-				"pale_oak",
-				"poplar"
-		};
-
-		for (String wood : woodTypes) {
-			if (!path.startsWith(wood + "_")) {
-				continue;
-			}
-
-			Identifier plankId =
-					Identifier.fromNamespaceAndPath(
-							resultId.getNamespace(),
-							wood + "_planks"
-					);
-
-			Optional<Item> planks =
-					BuiltInRegistries.ITEM.getOptional(plankId);
-
-			if (planks.isPresent()
-					&& ingredient.test(new ItemStack(planks.get()))) {
-				return planks;
-			}
-		}
-
-		return Optional.empty();
-	}
-
 	private static boolean isGenericStoneExcludedOutput(Item resultItem) {
 		String path = BuiltInRegistries.ITEM.getKey(resultItem).getPath();
 
