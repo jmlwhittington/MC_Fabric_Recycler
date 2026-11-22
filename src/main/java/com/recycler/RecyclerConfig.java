@@ -148,7 +148,7 @@ public final class RecyclerConfig {
             processingTimeTicks = configuredValue.intValueExact();
             enableStairSlabCrafting = configuredStairSlabCrafting;
             enableGlassShardDrops = configuredGlassShardDrops;
-            glassShardDropChance = configuredGlassShardDropChance;
+            glassShardDropChance = configuredGlassShardChance;
 
             return true;
 
