@@ -4,5 +4,7 @@
   "item.recycler.generic_wood": "Generic Wood",
   "item.recycler.generic_stone": "Generic Stone",
   "item.recycler.glass_shards": "Glass Shards",
-  "item.recycler.cullet": "Cullet"
+  "item.recycler.cullet": "Cullet",
+  "gui.recycler.input": "Input",
+  "gui.recycler.output": "Output"
 }

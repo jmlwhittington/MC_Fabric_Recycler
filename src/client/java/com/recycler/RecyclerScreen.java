@@ -146,14 +146,14 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 
 		graphics.text(
 				this.font,
-				"Input",
+				Component.translatable("gui.recycler.input"),
 				21,
 				23,
 				textColor,
 				false
 		);
 
-		String outputLabel = "Output";
+		Component outputLabel = Component.translatable("gui.recycler.output");
 
 		graphics.text(
 				this.font,
