@@ -674,8 +674,14 @@ public final class RecyclerLogic {
 
 		return recoveredItems;
 	}
-
+	
 	private static boolean isWoodSlabIngredient(Ingredient ingredient) {
+		if (ingredient.display()
+				instanceof SlotDisplay.ItemSlotDisplay itemDisplay
+				&& itemDisplay.item().value() == Items.BAMBOO_SLAB) {
+			return false;
+		}
+
 		List<Holder<Item>> alternatives =
 				ingredient.items().toList();
 
@@ -684,12 +690,6 @@ public final class RecyclerLogic {
 						holder.is(WOODEN_SLABS_TAG)
 								|| holder.is(COMMON_WOODEN_SLABS_TAG)
 				);
-				
-		if (ingredient.display()
-				instanceof SlotDisplay.ItemSlotDisplay itemDisplay
-				&& itemDisplay.item().value() == Items.BAMBOO_SLAB) {
-			return false;
-		}
 	}
 
 	private static boolean isWoodLogIngredient(Ingredient ingredient) {
