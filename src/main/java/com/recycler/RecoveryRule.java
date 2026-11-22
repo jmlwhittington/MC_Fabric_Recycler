@@ -43,8 +43,8 @@ public final class RecoveryRule {
     private static Map<Identifier, List<OutputRule>> itemRules =
             Map.of();
 
-    private static Map<Identifier, Map<Identifier, List<OutputRule>>> tagRules =
-            Map.of();
+	private static Map<Identifier, List<OutputRule>> tagRules =
+			Map.of();
 
     private RecoveryRule() {
     }
@@ -97,8 +97,8 @@ public final class RecoveryRule {
             Map<Identifier, List<OutputRule>> newItemRules =
                     parseItemRules(root);
 
-            Map<Identifier, Map<Identifier, List<OutputRule>>> newTagRules =
-                    parseTagRules(root);
+			Map<Identifier, List<OutputRule>> newTagRules =
+					parseTagRules(root);
 
             itemRules = Collections.unmodifiableMap(
                     new LinkedHashMap<>(newItemRules)
@@ -156,61 +156,37 @@ public final class RecoveryRule {
         return result;
     }
 
-    private static Map<Identifier, Map<Identifier, List<OutputRule>>> parseTagRules(
-            JsonObject root
-    ) {
-        Map<Identifier, Map<Identifier, List<OutputRule>>> result =
-                new LinkedHashMap<>();
+	private static Map<Identifier, List<OutputRule>> parseTagRules(
+			JsonObject root
+	) {
+		Map<Identifier, List<OutputRule>> result =
+				new LinkedHashMap<>();
 
-        if (!root.has("tags")) {
-            return result;
-        }
+		if (!root.has("tags")) {
+			return result;
+		}
 
-        JsonElement sectionElement = root.get("tags");
+		JsonElement sectionElement = root.get("tags");
 
-        if (!sectionElement.isJsonObject()) {
-            throw new IllegalArgumentException(
-                    "'tags' must be a JSON object."
-            );
-        }
+		if (!sectionElement.isJsonObject()) {
+			throw new IllegalArgumentException(
+					"'tags' must be a JSON object."
+			);
+		}
 
-        JsonObject section = sectionElement.getAsJsonObject();
+		JsonObject section = sectionElement.getAsJsonObject();
 
-        for (Map.Entry<String, JsonElement> tagEntry : section.entrySet()) {
-            Identifier tagId = parseIdentifier(tagEntry.getKey());
+		for (Map.Entry<String, JsonElement> entry : section.entrySet()) {
+			Identifier tagId = parseIdentifier(entry.getKey());
 
-            if (!tagEntry.getValue().isJsonObject()) {
-                throw new IllegalArgumentException(
-                        "Rules for tag " + tagId + " must be a JSON object."
-                );
-            }
+			List<OutputRule> outputs =
+					parseOutputRules(entry.getValue(), tagId.toString());
 
-            JsonObject inputItems = tagEntry.getValue().getAsJsonObject();
+			result.put(tagId, outputs);
+		}
 
-            Map<Identifier, List<OutputRule>> tagInputs =
-                    new LinkedHashMap<>();
-
-            for (Map.Entry<String, JsonElement> inputEntry
-                    : inputItems.entrySet()) {
-
-                Identifier inputId = parseIdentifier(inputEntry.getKey());
-
-                getRegisteredItem(inputId);
-
-                List<OutputRule> outputs =
-                        parseOutputRules(inputEntry.getValue(), inputId.toString());
-
-                tagInputs.put(inputId, outputs);
-            }
-
-            result.put(
-                    tagId,
-                    Collections.unmodifiableMap(tagInputs)
-            );
-        }
-
-        return result;
-    }
+		return result;
+	}
 
     private static List<OutputRule> parseOutputRules(
             JsonElement element,
@@ -325,7 +301,6 @@ public final class RecoveryRule {
                 ));
     }
 
-
 	public static boolean hasApplicableRule(ItemStack input) {
 		if (input == null || input.isEmpty()) {
 			return false;
@@ -338,16 +313,13 @@ public final class RecoveryRule {
 			return true;
 		}
 
-		for (Map.Entry<Identifier, Map<Identifier, List<OutputRule>>> entry
-				: tagRules.entrySet()) {
-
+		for (Identifier tagId : tagRules.keySet()) {
 			TagKey<Item> tag = TagKey.create(
 					Registries.ITEM,
-					entry.getKey()
+					tagId
 			);
 
-			if (input.is(tag)
-					&& entry.getValue().containsKey(inputId)) {
+			if (input.is(tag)) {
 				return true;
 			}
 		}
@@ -371,7 +343,7 @@ public final class RecoveryRule {
 			return Optional.of(convertPotentialOutputs(exactRules));
 		}
 
-		for (Map.Entry<Identifier, Map<Identifier, List<OutputRule>>> entry
+		for (Map.Entry<Identifier, List<OutputRule>> entry
 				: tagRules.entrySet()) {
 
 			TagKey<Item> tag = TagKey.create(
@@ -379,15 +351,10 @@ public final class RecoveryRule {
 					entry.getKey()
 			);
 
-			if (!input.is(tag)) {
-				continue;
-			}
-
-			List<OutputRule> outputs =
-					entry.getValue().get(inputId);
-
-			if (outputs != null) {
-				return Optional.of(convertPotentialOutputs(outputs));
+			if (input.is(tag)) {
+				return Optional.of(
+						convertPotentialOutputs(entry.getValue())
+				);
 			}
 		}
 
@@ -410,44 +377,37 @@ public final class RecoveryRule {
 		return results;
 	}
 
-    public static Optional<List<ItemStack>> getRecoveryResult(
-            ItemStack input
-    ) {
-        if (input == null || input.isEmpty()) {
-            return Optional.empty();
-        }
+	public static Optional<List<ItemStack>> getRecoveryResult(
+			ItemStack input
+	) {
+		if (input == null || input.isEmpty()) {
+			return Optional.empty();
+		}
 
-        Identifier inputId =
-                BuiltInRegistries.ITEM.getKey(input.getItem());
+		Identifier inputId =
+				BuiltInRegistries.ITEM.getKey(input.getItem());
 
-        List<OutputRule> exactRules = itemRules.get(inputId);
+		List<OutputRule> exactRules = itemRules.get(inputId);
 
-        if (exactRules != null) {
-            return Optional.of(rollOutputs(exactRules));
-        }
+		if (exactRules != null) {
+			return Optional.of(rollOutputs(exactRules));
+		}
 
-        for (Map.Entry<Identifier, Map<Identifier, List<OutputRule>>> entry
-                : tagRules.entrySet()) {
+		for (Map.Entry<Identifier, List<OutputRule>> entry
+				: tagRules.entrySet()) {
 
-            TagKey<Item> tag = TagKey.create(
-                    Registries.ITEM,
-                    entry.getKey()
-            );
+			TagKey<Item> tag = TagKey.create(
+					Registries.ITEM,
+					entry.getKey()
+			);
 
-            if (!input.is(tag)) {
-                continue;
-            }
+			if (input.is(tag)) {
+				return Optional.of(rollOutputs(entry.getValue()));
+			}
+		}
 
-            List<OutputRule> outputs =
-                    entry.getValue().get(inputId);
-
-            if (outputs != null) {
-                return Optional.of(rollOutputs(outputs));
-            }
-        }
-
-        return Optional.empty();
-    }
+		return Optional.empty();
+	}
 
     private static List<ItemStack> rollOutputs(
             List<OutputRule> rules
