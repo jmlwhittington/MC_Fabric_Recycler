@@ -64,6 +64,7 @@ public class RecyclerMod implements ModInitializer {
 							player,
 							new ConfigCheckPayload(
 									RecyclerConfig.getProcessingTimeTicks(),
+									RecyclerConfig.isStairSlabCraftingEnabled(),
 									RecoveryRule.getConfigurationFingerprint()
 							)
 					);

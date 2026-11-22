@@ -37,8 +37,14 @@ public class RecyclerClient implements ClientModInitializer {
 								!localRulesFingerprint.equals(
 										payload.recoveryRulesFingerprint()
 								);
+						
+						boolean localStairSlabSetting =
+								RecyclerConfig.isStairSlabCraftingEnabled();
 
-						if (!processingMismatch && !rulesMismatch) {
+						boolean stairSlabMismatch =
+								localStairSlabSetting != payload.stairSlabCraftingEnabled();
+
+						if (!processingMismatch && !rulesMismatch && !stairSlabMismatch) {
 							return;
 						}
 
@@ -66,6 +72,18 @@ public class RecyclerClient implements ClientModInitializer {
 							client.player.displayClientMessage(
 									Component.literal(
 											"Recovery rules: server and local rules differ."
+									),
+									false
+							);
+						}
+						
+						if (stairSlabMismatch) {
+							client.player.displayClientMessage(
+									Component.literal(
+											"Stair/slab crafting: server = "
+													+ payload.stairSlabCraftingEnabled()
+													+ "; local = "
+													+ localStairSlabSetting
 									),
 									false
 							);

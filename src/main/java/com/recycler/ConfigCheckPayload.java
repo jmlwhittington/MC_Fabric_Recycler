@@ -7,6 +7,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 public record ConfigCheckPayload(
         int processingTimeTicks,
+		boolean stairSlabCraftingEnabled,
         String recoveryRulesFingerprint
 ) implements CustomPacketPayload {
 
@@ -16,13 +17,15 @@ public record ConfigCheckPayload(
     public static final StreamCodec<
             RegistryFriendlyByteBuf,
             ConfigCheckPayload
-    > CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT,
-            ConfigCheckPayload::processingTimeTicks,
-            ByteBufCodecs.STRING_UTF8,
-            ConfigCheckPayload::recoveryRulesFingerprint,
-            ConfigCheckPayload::new
-    );
+	> CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT,
+			ConfigCheckPayload::processingTimeTicks,
+			ByteBufCodecs.BOOL,
+			ConfigCheckPayload::stairSlabCraftingEnabled,
+			ByteBufCodecs.STRING_UTF8,
+			ConfigCheckPayload::recoveryRulesFingerprint,
+			ConfigCheckPayload::new
+	);
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

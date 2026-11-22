@@ -134,6 +134,10 @@ public class StairSlabRecipe extends CustomRecipe {
 
     @Override
     public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
+		if (!RecyclerConfig.isStairSlabCraftingEnabled()) {
+			return NonNullList.withSize(input.size(), ItemStack.EMPTY);
+		}
+		
         NonNullList<ItemStack> remaining =
                 NonNullList.withSize(input.size(), ItemStack.EMPTY);
 

@@ -125,8 +125,9 @@ public final class RecyclerConfig {
 				DEFAULT_ENABLE_STAIR_SLAB_CRAFTING
 		);
 		
-        Files.writeString(CONFIG_PATH, GSON.toJson(json));
-        processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
+		Files.writeString(CONFIG_PATH, GSON.toJson(json));
+		processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
+		enableStairSlabCrafting = DEFAULT_ENABLE_STAIR_SLAB_CRAFTING;
     }
 
     public static int getProcessingTimeTicks() {
@@ -135,4 +136,8 @@ public final class RecyclerConfig {
 	
 	private static boolean enableStairSlabCrafting =
         DEFAULT_ENABLE_STAIR_SLAB_CRAFTING;
+		
+	public static boolean isStairSlabCraftingEnabled() {
+		return enableStairSlabCrafting;
+	}
 }
