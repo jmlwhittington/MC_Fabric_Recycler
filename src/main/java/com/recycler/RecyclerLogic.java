@@ -200,15 +200,24 @@ public final class RecyclerLogic {
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
 
-		if (item == Items.FILLED_MAP) {
-			var decorations = input.get(DataComponents.MAP_DECORATIONS);
+		if (item == Items.NAME_TAG) {
+			return Optional.of(
+					createIngredients(Items.PAPER, 1)
+			);
+		}
 
-			if (decorations != null
-					&& !decorations.decorations().isEmpty()) {
-				return Optional.of(
-						createIngredients(Items.PAPER, 8)
-				);
-			}
+		if (item == Items.TNT) {
+			return Optional.of(
+					createIngredients(Items.GUNPOWDER, 5)
+			);
+		}
+
+		if (path.endsWith("_map")
+				&& !path.equals("filled_map")
+				&& !path.equals("map")) {
+			return Optional.of(
+					createIngredients(Items.PAPER, 8)
+			);
 		}
 
 		if (item == Items.TARGET) {
