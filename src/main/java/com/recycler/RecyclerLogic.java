@@ -243,6 +243,8 @@ public final class RecyclerLogic {
 					resultPath.substring("stripped_".length());
 		}
 
+		final String matchingResultPath = resultPath;
+
 		return ingredient.items()
 				.filter(holder ->
 						holder.is(GENERIC_WOOD_TAG)
@@ -720,8 +722,6 @@ public final class RecyclerLogic {
 		if (path.startsWith("stripped_")) {
 			path = path.substring("stripped_".length());
 		}
-		
-		final String matchingResultPath = resultPath;
 
 		String[] logSuffixes = {
 				"_log",
