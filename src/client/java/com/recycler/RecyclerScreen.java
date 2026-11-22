@@ -56,22 +56,14 @@ public class RecyclerScreen extends AbstractContainerScreen<RecyclerMenu> {
 				0xFF555555
 		);
 
-		if (this.menu.isInputRejected()) {
+		int progressWidth = Math.round(38 * this.menu.getProgress());
+
+		if (progressWidth > 0) {
 			graphics.fill(
 					x + 62, y + 39,
-					x + 100, y + 45,
-					0xFFAA3333
+					x + 62 + progressWidth, y + 45,
+					0xFF55AA55
 			);
-		} else {
-			int progressWidth = Math.round(38 * this.menu.getProgress());
-
-			if (progressWidth > 0) {
-				graphics.fill(
-						x + 62, y + 39,
-						x + 62 + progressWidth, y + 45,
-						0xFF55AA55
-				);
-			}
 		}
 
 		graphics.outline(

@@ -35,7 +35,6 @@ public class RecyclerBlockEntity extends BlockEntity
 
     private int processingTicks = 0;
     private boolean isProcessing = false;
-    private boolean inputRejected = false;
 
     private List<ItemStack> pendingRecovery = null;
 
@@ -81,7 +80,6 @@ public class RecyclerBlockEntity extends BlockEntity
 					&& !sameInputItem(previous, items.get(slot))) {
 				processingTicks = 0;
 				isProcessing = false;
-				inputRejected = false;
 				pendingRecovery = null;
 			}
 
@@ -98,7 +96,6 @@ public class RecyclerBlockEntity extends BlockEntity
         if (!result.isEmpty() && slot == INPUT_SLOT) {
             processingTicks = 0;
             isProcessing = false;
-            inputRejected = false;
             pendingRecovery = null;
         }
 
@@ -126,7 +123,6 @@ public class RecyclerBlockEntity extends BlockEntity
 		if (slot == INPUT_SLOT && !sameInputItem(previous, stack)) {
 			processingTicks = 0;
 			isProcessing = false;
-			inputRejected = false;
 			pendingRecovery = null;
 		}
 
@@ -138,7 +134,6 @@ public class RecyclerBlockEntity extends BlockEntity
         items.clear();
         processingTicks = 0;
         isProcessing = false;
-        inputRejected = false;
         pendingRecovery = null;
         setChanged();
     }
@@ -146,7 +141,15 @@ public class RecyclerBlockEntity extends BlockEntity
 
 	@Override
 	public boolean canPlaceItem(int slot, ItemStack stack) {
-		return slot == INPUT_SLOT && !stack.isEmpty() && level != null;
+		if (slot != INPUT_SLOT || stack.isEmpty() || level == null) {
+			return false;
+		}
+
+		if (level.isClientSide()) {
+			return true;
+		}
+
+		return RecyclerLogic.recoverIngredients(level, stack).isPresent();
 	}
 
     @Override
@@ -175,20 +178,14 @@ public class RecyclerBlockEntity extends BlockEntity
 		if (input.isEmpty()) {
 			if (blockEntity.processingTicks != 0
 					|| blockEntity.isProcessing
-					|| blockEntity.pendingRecovery != null
-					|| blockEntity.inputRejected) {
+					|| blockEntity.pendingRecovery != null) {
 
 				blockEntity.processingTicks = 0;
 				blockEntity.isProcessing = false;
-				blockEntity.inputRejected = false;
 				blockEntity.pendingRecovery = null;
 				blockEntity.setChanged();
 			}
 
-			return;
-		}
-
-		if (blockEntity.inputRejected) {
 			return;
 		}
 
@@ -199,7 +196,6 @@ public class RecyclerBlockEntity extends BlockEntity
 			if (result.isEmpty()) {
 				blockEntity.processingTicks = 0;
 				blockEntity.isProcessing = false;
-				blockEntity.inputRejected = true;
 				blockEntity.setChanged();
 				return;
 			}
@@ -250,7 +246,6 @@ public class RecyclerBlockEntity extends BlockEntity
 		pendingRecovery = null;
 		processingTicks = 0;
 		isProcessing = false;
-		inputRejected = false;
 
 		setChanged();
 	}
@@ -347,10 +342,6 @@ public class RecyclerBlockEntity extends BlockEntity
     public int getProcessingTicks() {
         return processingTicks;
     }
-	
-	public boolean isInputRejected() {
-		return inputRejected;
-	}
 
     @Override
     public int[] getSlotsForFace(Direction side) {

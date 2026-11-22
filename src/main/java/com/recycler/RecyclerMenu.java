@@ -20,7 +20,7 @@ public class RecyclerMenu extends AbstractContainerMenu {
     private final Container container;
 
 	private final RecyclerBlockEntity blockEntity;
-	private final int[] machineData = new int[2];
+	private final int[] machineData = new int[1];
 
     public RecyclerMenu(int containerId, Inventory playerInventory) {
         this(
@@ -86,14 +86,9 @@ public class RecyclerMenu extends AbstractContainerMenu {
 	public void broadcastChanges() {
 		if (blockEntity != null) {
 			machineData[0] = blockEntity.getProcessingTicks();
-			machineData[1] = blockEntity.isInputRejected() ? 1 : 0;
 		}
 
 		super.broadcastChanges();
-	}
-	
-	public boolean isInputRejected() {
-		return machineData[1] != 0;
 	}
 
 	public float getProgress() {
