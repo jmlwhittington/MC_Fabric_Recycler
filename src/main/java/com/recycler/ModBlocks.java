@@ -38,6 +38,8 @@ public final class ModBlocks {
 						output.accept(RECYCLER);
 					    output.accept(ModItems.GENERIC_WOOD);
 						output.accept(ModItems.GENERIC_STONE);
+						output.accept(ModItems.GLASS_SHARDS);
+						output.accept(ModItems.CULLET);
 					})
 					.build();
 
