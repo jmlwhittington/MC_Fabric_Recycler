@@ -89,7 +89,7 @@ public class RecyclerClient implements ClientModInitializer {
 								Component.literal(
 										"The server controls Recycler behavior. "
 												+ "Your local configuration was not changed."
-								),
+								)
 						);
 					});
 				}
