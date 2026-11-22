@@ -23,6 +23,10 @@ import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
 import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import com.mojang.brigadier.Command;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -155,14 +159,13 @@ public class RecyclerMod implements ModInitializer {
 			}
 
 			String path = blockId.getPath();
-
 			float chance;
 
 			if (path.equals("glass")
-					|| path.matches("[a-z]+_stained_glass")) {
+					|| path.matches("[a-z]+(?:_[a-z]+)*_stained_glass")) {
 				chance = 0.25f;
 			} else if (path.equals("glass_pane")
-					|| path.matches("[a-z]+_stained_glass_pane")) {
+					|| path.matches("[a-z]+(?:_[a-z]+)*_stained_glass_pane")) {
 				chance = 0.09375f;
 			} else {
 				continue;
@@ -173,21 +176,23 @@ public class RecyclerMod implements ModInitializer {
 			);
 		}
 
-		LootTableEvents.MODIFY.register(
-				(key, tableBuilder, source, registries) -> {
-					Float chance = glassDrops.get(key);
+		LootTableEvents.MODIFY_DROPS.register((holder, context, drops) -> {
+			Float chance = glassDrops.get(holder.unwrapKey().orElse(null));
 
-					if (chance == null) {
-						return;
-					}
+			if (chance == null) {
+				return;
+			}
 
-					LootPool.Builder pool = LootPool.lootPool()
-							.add(LootItem.lootTableItem(ModItems.GLASS_SHARDS))
-							.when(LootItemRandomChanceCondition.randomChance(chance));
+			ItemStack tool = context.getParamOrNull(LootContextParams.TOOL);
 
-					tableBuilder.withPool(pool);
-				}
-		);
+			if (tool != null && EnchantmentHelper.hasSilkTouch(tool)) {
+				return;
+			}
+
+			if (context.getRandom().nextFloat() < chance) {
+				drops.add(new ItemStack(ModItems.GLASS_SHARDS));
+			}
+		});
 	}
 	
 	private static int generateItemReport(

@@ -565,15 +565,17 @@ public final class RecyclerLogic {
 			return Optional.empty();
 		}
 
+		String base = path.substring(
+				0,
+				path.length() - suffix.length()
+		);
+
 		List<String> candidates = new ArrayList<>();
 
 		candidates.add(base + "s");
-
-		candidates.add(base);
-
 		candidates.add(base + "_planks");
-
 		candidates.add(base + "_block");
+		candidates.add(base);
 
 		for (String candidate : candidates) {
 			Identifier candidateId = Identifier.fromNamespaceAndPath(
