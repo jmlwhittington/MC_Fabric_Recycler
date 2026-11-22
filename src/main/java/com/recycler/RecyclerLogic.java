@@ -686,10 +686,14 @@ public final class RecyclerLogic {
 	}
 
 	private static boolean isWoodSlabIngredient(Ingredient ingredient) {
-		return ingredient.items().anyMatch(holder ->
-				holder.is(WOODEN_SLABS_TAG)
-						|| holder.is(COMMON_WOODEN_SLABS_TAG)
-		);
+		List<Holder<Item>> alternatives =
+				ingredient.items().toList();
+
+		return !alternatives.isEmpty()
+				&& alternatives.stream().allMatch(holder ->
+						holder.is(WOODEN_SLABS_TAG)
+								|| holder.is(COMMON_WOODEN_SLABS_TAG)
+				);
 	}
 
 	private static boolean isWoodLogIngredient(Ingredient ingredient) {
@@ -768,75 +772,6 @@ public final class RecyclerLogic {
 			if (outputCount != 4 || ingredients.size() != 4) {
 				return Optional.empty();
 			}
-		}
-
-		if (path.equals("copper_trapdoor")) {
-			if (outputCount != 2 || ingredients.size() != 6) {
-				return Optional.empty();
-			}
-
-			Optional<Item> woodSpecific =
-					getWoodSpecificIngredient(
-							ingredients.get(0),
-							lookupItem
-					);
-
-			if (woodSpecific.isPresent()
-					&& ingredients.stream().allMatch(
-							ingredient ->
-									ingredient.test(
-											new ItemStack(woodSpecific.get())
-									)
-					)) {
-				return Optional.of(
-						createIngredients(woodSpecific.get(), 4)
-				);
-			}
-
-			Optional<Item> generic =
-					getGenericIngredient(
-							ingredients.get(0),
-							lookupItem
-					);
-
-			if (generic.isPresent()
-					&& ingredients.stream().allMatch(
-							ingredient ->
-									getGenericIngredient(ingredient, lookupItem)
-											.filter(generic.get()::equals)
-											.isPresent()
-					)) {
-				return Optional.of(
-						createIngredients(generic.get(), 4)
-				);
-			}
-
-			Optional<Holder<Item>> representative =
-					ingredients.get(0).items()
-							.sorted(
-									Comparator.comparing(holder ->
-											BuiltInRegistries.ITEM
-													.getKey(holder.value())
-													.toString()
-									)
-							)
-							.filter(holder -> {
-								ItemStack stack =
-										new ItemStack(holder.value());
-
-								return ingredients.stream().allMatch(
-										ingredient -> ingredient.test(stack)
-								);
-							})
-							.findFirst();
-
-			if (representative.isEmpty()) {
-				return Optional.empty();
-			}
-
-			return Optional.of(
-					createIngredients(representative.get().value(), 4)
-			);
 		}
 
 		boolean hasSlabOrLog = ingredients.stream().anyMatch(
@@ -926,66 +861,44 @@ public final class RecyclerLogic {
 			return Optional.of(recoveredIngredients);
 		}
 
-		Optional<Item> woodSpecific =
-				getWoodSpecificIngredient(
-						ingredients.get(0),
-						lookupItem
-				);
+		Map<Item, Integer> ingredientCounts = new LinkedHashMap<>();
 
-		if (woodSpecific.isPresent()
-				&& ingredients.stream().allMatch(
-						ingredient ->
-								ingredient.test(new ItemStack(woodSpecific.get()))
-				)) {
-			return Optional.of(
-					createIngredients(woodSpecific.get(), 4)
+		for (Ingredient ingredient : ingredients) {
+			Optional<Item> representative =
+					getRepresentativeIngredient(
+							ingredient,
+							lookupItem
+					);
+
+			if (representative.isEmpty()) {
+				return Optional.empty();
+			}
+
+			ingredientCounts.merge(
+					representative.get(),
+					1,
+					Integer::sum
 			);
 		}
 
-		Optional<Item> generic =
-				getGenericIngredient(
-						ingredients.get(0),
-						lookupItem
-				);
+		List<ItemStack> recoveredIngredients = new ArrayList<>();
 
-		if (generic.isPresent()
-				&& ingredients.stream().allMatch(
-						ingredient ->
-								getGenericIngredient(ingredient, lookupItem)
-										.filter(generic.get()::equals)
-										.isPresent()
-				)) {
-			return Optional.of(
-					createIngredients(generic.get(), 4)
+		for (Map.Entry<Item, Integer> entry : ingredientCounts.entrySet()) {
+			int ingredientCount = entry.getValue();
+
+			if (ingredientCount % outputCount != 0) {
+				return Optional.empty();
+			}
+
+			recoveredIngredients.addAll(
+					createIngredients(
+							entry.getKey(),
+							ingredientCount / outputCount
+					)
 			);
 		}
 
-		Optional<Holder<Item>> representative =
-				ingredients.get(0).items()
-						.sorted(
-								Comparator.comparing(holder ->
-										BuiltInRegistries.ITEM
-												.getKey(holder.value())
-												.toString()
-								)
-						)
-						.filter(holder -> {
-							ItemStack stack =
-									new ItemStack(holder.value());
-
-							return ingredients.stream().allMatch(
-									ingredient -> ingredient.test(stack)
-							);
-						})
-						.findFirst();
-
-		if (representative.isEmpty()) {
-			return Optional.empty();
-		}
-
-		return Optional.of(
-				createIngredients(representative.get().value(), 4)
-		);
+		return Optional.of(recoveredIngredients);
 	}
 
     public static boolean canRecycleInput(Level level, ItemStack input) {
