@@ -156,27 +156,34 @@ public class RecyclerMod implements ModInitializer {
 			}
 
 			String path = blockId.getPath();
-			float chance;
+			float chanceMultiplier;
 
 			if (path.equals("glass")
 					|| path.matches("[a-z]+(?:_[a-z]+)*_stained_glass")) {
-				chance = 0.25f;
+				chanceMultiplier = 1.0f;
+
 			} else if (path.equals("glass_pane")
 					|| path.matches("[a-z]+(?:_[a-z]+)*_stained_glass_pane")) {
-				chance = 0.09375f;
+				chanceMultiplier = 0.375f;
+
 			} else {
 				continue;
 			}
 
 			block.getLootTable().ifPresent(
-					lootTable -> glassDrops.put(lootTable, chance)
+					lootTable -> glassDrops.put(lootTable, chanceMultiplier)
 			);
 		}
 
 		LootTableEvents.MODIFY_DROPS.register((holder, context, drops) -> {
-			Float chance = glassDrops.get(holder.unwrapKey().orElse(null));
+			if (!RecyclerConfig.areGlassShardDropsEnabled()) {
+				return;
+			}
 
-			if (chance == null) {
+			Float chanceMultiplier =
+					glassDrops.get(holder.unwrapKey().orElse(null));
+
+			if (chanceMultiplier == null) {
 				return;
 			}
 
@@ -187,6 +194,9 @@ public class RecyclerMod implements ModInitializer {
 			if (silkTouchPredicate.value().test(context)) {
 				return;
 			}
+
+			float chance =
+					RecyclerConfig.getGlassShardDropChance() * chanceMultiplier;
 
 			if (context.getRandom().nextFloat() < chance) {
 				drops.add(new ItemStack(ModItems.GLASS_SHARDS));
