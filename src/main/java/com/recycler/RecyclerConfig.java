@@ -145,12 +145,20 @@ public final class RecyclerConfig {
 				configuredGlassShardChance = configuredChance.floatValue();
 			}
 
-            processingTimeTicks = configuredValue.intValueExact();
-            enableStairSlabCrafting = configuredStairSlabCrafting;
-            enableGlassShardDrops = configuredGlassShardDrops;
-            glassShardDropChance = configuredGlassShardChance;
+			processingTimeTicks = configuredValue.intValueExact();
+			enableStairSlabCrafting = configuredStairSlabCrafting;
+			enableGlassShardDrops = configuredGlassShardDrops;
+			glassShardDropChance = configuredGlassShardChance;
 
-            return true;
+			addMissingOptions(
+					json,
+					processingTimeTicks,
+					enableStairSlabCrafting,
+					enableGlassShardDrops,
+					glassShardDropChance
+			);
+
+			return true;
 
         } catch (IOException | JsonParseException | NumberFormatException e) {
             processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
@@ -167,6 +175,46 @@ public final class RecyclerConfig {
             return false;
         }
     }
+
+	private static void addMissingOptions(
+			JsonObject json,
+			int processingTime,
+			boolean stairSlabCrafting,
+			boolean glassShardDrops,
+			float glassShardChance
+	) {
+		boolean needsUpdate =
+				!json.has("processing_time_ticks")
+				|| !json.has("enable_stair_slab_crafting")
+				|| !json.has("enable_glass_shard_drops")
+				|| !json.has("glass_shard_drop_chance");
+
+		if (!needsUpdate) {
+			return;
+		}
+
+		JsonObject updated = new JsonObject();
+
+		updated.addProperty("processing_time_ticks", processingTime);
+		updated.addProperty("enable_stair_slab_crafting", stairSlabCrafting);
+		updated.addProperty("enable_glass_shard_drops", glassShardDrops);
+		updated.addProperty("glass_shard_drop_chance", glassShardChance);
+
+		json.entrySet().forEach(entry -> {
+			String key = entry.getKey();
+
+			if (!updated.has(key)) {
+				updated.add(key, entry.getValue());
+			}
+		});
+
+		try {
+			Files.writeString(CONFIG_PATH, GSON.toJson(updated));
+			LOGGER.info("Updated config with newly available options.");
+		} catch (IOException e) {
+			LOGGER.warn("Could not update config file with missing options.", e);
+		}
+	}
 
     private static void saveDefaultConfig() throws IOException {
         JsonObject json = new JsonObject();
