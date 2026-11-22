@@ -284,24 +284,19 @@ public final class RecyclerLogic {
 				.findFirst();
 	}
 
-	private static boolean isGenericStoneExcludedOutput(Item resultItem) {
-		String path = BuiltInRegistries.ITEM.getKey(resultItem).getPath();
+	private static boolean isGenericStoneIngredient(Ingredient ingredient) {
+		List<Holder<Item>> alternatives =
+				ingredient.items().toList();
 
-		return switch (path) {
-			case "polished_deepslate",
-				 "cobblestone_wall",
-				 "blackstone_wall",
-				 "cobbled_deepslate_wall",
-				 "piston",
-				 "sticky_piston",
-				 "observer",
-				 "dispenser",
-				 "dropper",
-				 "lever",
-				 "polished_blackstone" -> true;
+		return !alternatives.isEmpty()
+				&& alternatives.stream().allMatch(holder -> {
+					Item item = holder.value();
 
-			default -> false;
-		};
+					return holder.is(GENERIC_STONE_TAG)
+							|| item == Items.COBBLESTONE
+							|| item == Items.COBBLED_DEEPSLATE
+							|| item == Items.BLACKSTONE;
+				});
 	}
 
 	private static boolean isTagIngredient(
@@ -318,16 +313,14 @@ public final class RecyclerLogic {
 	}
 
 	private static Optional<Item> getGenericIngredient(
-			Ingredient ingredient,
-			Item resultItem
+			Ingredient ingredient
 	) {
 		if (isTagIngredient(ingredient, GENERIC_WOOD_TAG)
 				|| isTagIngredient(ingredient, COMMON_PLANKS_TAG)) {
 			return Optional.of(ModItems.GENERIC_WOOD);
 		}
 
-		if (!isGenericStoneExcludedOutput(resultItem)
-				&& isTagIngredient(ingredient, GENERIC_STONE_TAG)) {
+		if (isGenericStoneIngredient(ingredient)) {
 			return Optional.of(ModItems.GENERIC_STONE);
 		}
 
@@ -349,10 +342,7 @@ public final class RecyclerLogic {
 		}
 
 		Optional<Item> generic =
-				getGenericIngredient(
-						ingredient,
-						resultItem
-				);
+				getGenericIngredient(ingredient);
 
 		if (generic.isPresent()) {
 			return generic;
@@ -377,12 +367,6 @@ public final class RecyclerLogic {
 
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
-		
-		if (isDyedShulkerBox(input)) {
-			return Optional.of(
-					createIngredients(Items.SHULKER_BOX, 1)
-			);
-		}
 
 		if (item == Items.NAME_TAG) {
 			return Optional.of(
@@ -757,12 +741,12 @@ public final class RecyclerLogic {
 		return false;
 	}
 
-	private static Optional<List<ItemStack>> getMultiOutputIngredients(
+	private static Optional<List<ItemStack>> getRecipeIngredients(
 			Item inputItem,
 			int outputCount,
 			List<Ingredient> ingredients
 	) {
-		if (outputCount <= 1 || ingredients.isEmpty()) {
+		if (outputCount <= 0 || ingredients.isEmpty()) {
 			return Optional.empty();
 		}
 
@@ -771,8 +755,9 @@ public final class RecyclerLogic {
 		String path =
 				BuiltInRegistries.ITEM.getKey(lookupItem).getPath();
 
-		if (path.equals("copper_grate")
-				|| path.equals("cut_copper")) {
+		if (outputCount > 1
+				&& (path.equals("copper_grate")
+				|| path.equals("cut_copper"))) {
 
 			if (outputCount != 4 || ingredients.size() != 4) {
 				return Optional.empty();
@@ -980,17 +965,16 @@ public final class RecyclerLogic {
                 List<Ingredient> ingredients =
                         craftingRecipe.placementInfo().ingredients();
 				
-				if (result.getCount() != 1
-						&& getMultiOutputIngredients(
-								input.getItem(),
-								result.getCount(),
-								ingredients
-						).isEmpty()) {
+				if (result.getCount() == 1
+						&& ingredients.size() <= 1) {
 					continue;
 				}
 
-				if (result.getCount() == 1
-						&& ingredients.size() <= 1) {
+				if (getRecipeIngredients(
+						input.getItem(),
+						result.getCount(),
+						ingredients
+				).isEmpty()) {
 					continue;
 				}
 
@@ -1115,34 +1099,22 @@ public final class RecyclerLogic {
 				List<ItemStack> ingredients;
 
 				if (result.getCount() == 1) {
-					ingredients = new ArrayList<>(recipeIngredients.size());
+					Optional<List<ItemStack>> singleOutputIngredients =
+							getRecipeIngredients(
+									input.getItem(),
+									result.getCount(),
+									recipeIngredients
+							);
 
-					boolean validIngredients = true;
-
-					for (Ingredient ingredient : recipeIngredients) {
-						Optional<Item> representative =
-								getRepresentativeIngredient(
-										ingredient,
-										result.getItem()
-								);
-
-						if (representative.isEmpty()) {
-							validIngredients = false;
-							break;
-						}
-
-						ingredients.add(
-								new ItemStack(representative.get())
-						);
-					}
-
-					if (!validIngredients) {
+					if (singleOutputIngredients.isEmpty()) {
 						continue;
 					}
 
+					ingredients = singleOutputIngredients.get();
+
 				} else {
 					Optional<List<ItemStack>> multiOutputIngredients =
-							getMultiOutputIngredients(
+							getRecipeIngredients(
 									input.getItem(),
 									result.getCount(),
 									recipeIngredients
@@ -1266,51 +1238,19 @@ public final class RecyclerLogic {
 					continue;
 				}
 
-				List<ItemStack> ingredients;
-
-				if (result.getCount() == 1) {
-					ingredients = new ArrayList<>(recipeIngredients.size());
-
-					boolean validIngredients = true;
-
-					for (Ingredient ingredient : recipeIngredients) {
-						Optional<Item> representative =
-								getRepresentativeIngredient(
-										ingredient,
-										result.getItem()
-								);
-
-						if (representative.isEmpty()) {
-							validIngredients = false;
-							break;
-						}
-
-						ingredients.add(
-								new ItemStack(representative.get())
+				Optional<List<ItemStack>> recoveredIngredients =
+						getRecipeIngredients(
+								input.getItem(),
+								result.getCount(),
+								recipeIngredients
 						);
-					}
 
-					if (!validIngredients) {
-						continue;
-					}
-
-				} else {
-					Optional<List<ItemStack>> multiOutputIngredients =
-							getMultiOutputIngredients(
-									input.getItem(),
-									result.getCount(),
-									recipeIngredients
-							);
-
-					if (multiOutputIngredients.isEmpty()) {
-						continue;
-					}
-
-					ingredients = multiOutputIngredients.get();
+				if (recoveredIngredients.isEmpty()) {
+					continue;
 				}
 
 				return Optional.of(
-						calculatePotentialOutputs(ingredients)
+						calculatePotentialOutputs(recoveredIngredients.get())
 				);
 
 			} catch (RuntimeException exception) {
