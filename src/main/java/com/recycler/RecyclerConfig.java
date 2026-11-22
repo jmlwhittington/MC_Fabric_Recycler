@@ -67,7 +67,7 @@ public final class RecyclerConfig {
 					) < 0
 					|| configuredValue.compareTo(
 							BigDecimal.valueOf(MAX_PROCESSING_TIME_TICKS)
-					) > 0 {
+					) > 0) {
 				throw new JsonParseException(
 						"processing_time_ticks must be a whole number between "
 								+ MIN_PROCESSING_TIME_TICKS
