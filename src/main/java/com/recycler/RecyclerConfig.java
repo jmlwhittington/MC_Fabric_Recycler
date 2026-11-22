@@ -72,7 +72,7 @@ public final class RecyclerConfig {
 						"processing_time_ticks must be a whole number between "
 								+ MIN_PROCESSING_TIME_TICKS
 								+ " and "
-								+ Integer.MAX_VALUE
+								+ MAX_PROCESSING_TIME_TICKS
 				);
 			}
 
