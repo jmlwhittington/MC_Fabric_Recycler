@@ -1,4 +1,3 @@
-
 package com.recycler;
 
 import net.minecraft.core.BlockPos;

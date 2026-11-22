@@ -126,7 +126,6 @@ public class RecyclerMod implements ModInitializer {
 					.append(itemName)
 					.append("\n");
 
-			// Protected items are reported separately.
 			if (RecyclerLogic.isProtectedInputForAudit(input)) {
 				protectedItems++;
 
@@ -137,7 +136,6 @@ public class RecyclerMod implements ModInitializer {
 				continue;
 			}
 
-			// Determine the recovery source.
 			boolean hasRule =
 					RecoveryRule.hasApplicableRule(input);
 

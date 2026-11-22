@@ -61,7 +61,8 @@ public final class RecyclerLogic {
 		if (input.has(DataComponents.FOOD)
 				|| input.is(Items.CAKE)
 				|| input.is(Items.FERMENTED_SPIDER_EYE)
-				|| input.is(Items.GLISTERING_MELON_SLICE)) {
+				|| input.is(Items.GLISTERING_MELON_SLICE)
+				|| input.is(Items.MELON)) {
 			return true;
 		}
 		
@@ -84,7 +85,11 @@ public final class RecyclerLogic {
 				|| path.equals("waxed_exposed_copper")
 				|| path.equals("waxed_weathered_copper")
 				|| path.equals("waxed_oxidized_copper")
-				|| path.equals("granite")) {
+				|| path.equals("granite")
+				|| path.equals("clay")
+				|| path.equals("honey_block")
+				|| path.endsWith("_wool_stairs")
+				|| path.endsWith("_wool_slab")) {
 			return true;
 		}
 		
@@ -195,9 +200,26 @@ public final class RecyclerLogic {
 		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
 		String path = inputId.getPath();
 
+		if (item == Items.FILLED_MAP) {
+			var decorations = input.get(DataComponents.MAP_DECORATIONS);
+
+			if (decorations != null
+					&& !decorations.decorations().isEmpty()) {
+				return Optional.of(
+						createIngredients(Items.PAPER, 8)
+				);
+			}
+		}
+
 		if (item == Items.TARGET) {
 			return Optional.of(
 					createIngredients(Items.HAY_BLOCK, 1)
+			);
+		}
+		
+		if (item == Items.QUARTZ_PILLAR) {
+			return Optional.of(
+					createIngredients(Items.QUARTZ_BLOCK, 1)
 			);
 		}
 		
@@ -371,6 +393,7 @@ public final class RecyclerLogic {
 		return BuiltInRegistries.ITEM.getOptional(baseId).orElse(item);
 	}
 
+
 	private static Item getRecipeLookupItem(ItemStack input) {
 		Item item = input.getItem();
 
@@ -391,7 +414,60 @@ public final class RecyclerLogic {
 					.orElse(item);
 		}
 
-		return getCopperBaseItem(item);
+		if (path.endsWith("_candle") && !path.equals("candle")) {
+			path = "candle";
+		}
+
+		if (path.equals("chipped_anvil")
+				|| path.equals("damaged_anvil")) {
+			path = "anvil";
+		}
+
+		if (path.equals("sticky_piston")) {
+			path = "piston";
+		}
+
+		String lightningPath = path;
+
+		if (lightningPath.startsWith("waxed_")) {
+			lightningPath = lightningPath.substring("waxed_".length());
+		}
+
+		if (lightningPath.startsWith("exposed_")) {
+			lightningPath = lightningPath.substring("exposed_".length());
+		} else if (lightningPath.startsWith("weathered_")) {
+			lightningPath = lightningPath.substring("weathered_".length());
+		} else if (lightningPath.startsWith("oxidized_")) {
+			lightningPath = lightningPath.substring("oxidized_".length());
+		}
+
+		if (lightningPath.equals("lightning_rod")) {
+			path = "lightning_rod";
+		}
+
+		if (path.equals("filled_map")) {
+			return Items.MAP;
+		}
+
+		if (path.equals("written_book")
+				|| path.equals("enchanted_book")) {
+			path = "book";
+		}
+
+		if (path.equals("glow_item_frame")) {
+			path = "item_frame";
+		}
+
+		Identifier lookupId = Identifier.fromNamespaceAndPath(
+				inputId.getNamespace(),
+				path
+		);
+
+		Item lookupItem = BuiltInRegistries.ITEM
+				.getOptional(lookupId)
+				.orElse(item);
+
+		return getCopperBaseItem(lookupItem);
 	}
 	
 	private static List<ItemStack> rollRecovery(List<ItemStack> ingredients) {
@@ -798,7 +874,6 @@ public static Optional<List<PotentialOutput>> getPotentialOutputs(
         return Optional.empty();
     }
 
-    // Exact item and tag rules take priority over normal recovery.
     Optional<List<RecoveryRule.PotentialRuleOutput>> ruleResults =
             RecoveryRule.getPotentialRecoveryResult(input);
 
@@ -817,8 +892,6 @@ public static Optional<List<PotentialOutput>> getPotentialOutputs(
         return Optional.of(outputs);
     }
 
-    // Handle special recovery cases such as wool, beds,
-    // cracked blocks, copper-related handling, and others.
     Optional<List<ItemStack>> specialIngredients =
             getSpecialIngredients(input);
 
@@ -929,8 +1002,6 @@ public static Optional<List<PotentialOutput>> getPotentialOutputs(
             );
 
         } catch (RuntimeException exception) {
-            // Match the existing recovery method's handling
-            // of recipes that cannot be evaluated.
         }
     }
 
