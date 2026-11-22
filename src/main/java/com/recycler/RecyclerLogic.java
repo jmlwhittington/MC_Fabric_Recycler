@@ -306,10 +306,13 @@ public final class RecyclerLogic {
 			Ingredient ingredient,
 			TagKey<Item> tag
 	) {
-		return ingredient.getValues()
-				.unwrapKey()
-				.filter(tag::equals)
-				.isPresent();
+		List<Holder<Item>> alternatives =
+				ingredient.items().toList();
+
+		return !alternatives.isEmpty()
+				&& alternatives.stream().allMatch(holder ->
+						holder.is(tag)
+				);
 	}
 
 	private static Optional<Item> getGenericIngredient(
