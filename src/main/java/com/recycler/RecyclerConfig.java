@@ -30,6 +30,7 @@ public final class RecyclerConfig {
             .resolve("config.json");
 
     private static int processingTimeTicks = DEFAULT_PROCESSING_TIME_TICKS;
+	private static final int MAX_PROCESSING_TIME_TICKS = Short.MAX_VALUE;
 
     private RecyclerConfig() {
     }
@@ -65,8 +66,8 @@ public final class RecyclerConfig {
 							BigDecimal.valueOf(MIN_PROCESSING_TIME_TICKS)
 					) < 0
 					|| configuredValue.compareTo(
-							BigDecimal.valueOf(Integer.MAX_VALUE)
-					) > 0) {
+							BigDecimal.valueOf(MAX_PROCESSING_TIME_TICKS)
+					) > 0 {
 				throw new JsonParseException(
 						"processing_time_ticks must be a whole number between "
 								+ MIN_PROCESSING_TIME_TICKS
