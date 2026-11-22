@@ -269,7 +269,7 @@ public final class RecyclerLogic {
 							plankPath.length() - "_planks".length()
 					);
 
-					return resultPath.startsWith(woodPrefix + "_");
+					return matchingResultPath.startsWith(woodPrefix + "_");
 				})
 				.sorted(
 						Comparator.comparing(holder ->
@@ -720,6 +720,8 @@ public final class RecyclerLogic {
 		if (path.startsWith("stripped_")) {
 			path = path.substring("stripped_".length());
 		}
+		
+		final String matchingResultPath = resultPath;
 
 		String[] logSuffixes = {
 				"_log",
