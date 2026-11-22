@@ -48,10 +48,7 @@ public final class RecoveryRule {
     private RecoveryRule() {
     }
 
-	public record PotentialRuleOutput(
-			ItemStack stack,
-			double chance
-	) {}
+	public record PotentialRuleOutput(ItemStack stack) {}
 
     private record OutputRule(Item item, int count, double chance) {
     }
@@ -386,8 +383,7 @@ public final class RecoveryRule {
 		for (OutputRule rule : rules) {
 			results.add(
 					new PotentialRuleOutput(
-							new ItemStack(rule.item(), rule.count()),
-							rule.chance()
+							new ItemStack(rule.item(), rule.count())
 					)
 			);
 		}

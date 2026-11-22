@@ -36,10 +36,7 @@ import java.util.Random;
 
 public final class RecyclerLogic {
 
-	public record PotentialOutput(
-			ItemStack stack,
-			double chance
-	) {}
+	public record PotentialOutput(ItemStack stack) {}
 
     private static final Random RANDOM = new Random();
 	
@@ -218,7 +215,8 @@ public final class RecyclerLogic {
 				"bamboo",
 				"crimson",
 				"warped",
-				"pale_oak"
+				"pale_oak",
+				"poplar"
 		};
 
 		for (String wood : woodTypes) {
@@ -251,7 +249,8 @@ public final class RecyclerLogic {
 				"bamboo",
 				"crimson",
 				"warped",
-				"pale_oak"
+				"pale_oak",
+				"poplar"
 		};
 
 		for (String wood : woodTypes) {
@@ -277,6 +276,26 @@ public final class RecyclerLogic {
 		return Optional.empty();
 	}
 
+	private static boolean isGenericStoneExcludedOutput(Item resultItem) {
+		String path = BuiltInRegistries.ITEM.getKey(resultItem).getPath();
+
+		return switch (path) {
+			case "polished_deepslate",
+				 "cobblestone_wall",
+				 "blackstone_wall",
+				 "cobbled_deepslate_wall",
+				 "piston",
+				 "sticky_piston",
+				 "observer",
+				 "dispenser",
+				 "dropper",
+				 "lever",
+				 "polished_blackstone" -> true;
+
+			default -> false;
+		};
+	}
+
 	private static Optional<Item> getGenericIngredient(
 			Ingredient ingredient,
 			Item resultItem
@@ -294,9 +313,10 @@ public final class RecyclerLogic {
 			return Optional.of(ModItems.GENERIC_WOOD);
 		}
 
-		if (alternatives.stream().allMatch(
-				holder -> holder.is(GENERIC_STONE_TAG)
-		)) {
+		if (!isGenericStoneExcludedOutput(resultItem)
+				&& alternatives.stream().allMatch(
+						holder -> holder.is(GENERIC_STONE_TAG)
+				)) {
 			return Optional.of(ModItems.GENERIC_STONE);
 		}
 
@@ -652,7 +672,122 @@ public final class RecyclerLogic {
 
 		return recoveredItems;
 	}
-	
+
+	private static Optional<List<ItemStack>> getRecipeSpecificIngredients(
+			Item resultItem,
+			List<Ingredient> recipeIngredients
+	) {
+		boolean slabRule = usesSlabRecoveryRule(resultItem);
+		boolean logRule = usesLogRecoveryRule(resultItem);
+
+		if (!slabRule && !logRule) {
+			return Optional.empty();
+		}
+
+		List<ItemStack> recoveredIngredients = new ArrayList<>();
+
+		int slabCount = 0;
+
+		for (Ingredient ingredient : recipeIngredients) {
+
+			if (slabRule && isWoodSlabIngredient(ingredient)) {
+				slabCount++;
+				continue;
+			}
+
+			if (logRule && isWoodLogIngredient(ingredient)) {
+				recoveredIngredients.add(
+						new ItemStack(ModItems.GENERIC_WOOD, 4)
+				);
+				continue;
+			}
+
+			Optional<Item> representative =
+					getRepresentativeIngredient(
+							ingredient,
+							resultItem
+					);
+
+			if (representative.isEmpty()) {
+				return Optional.empty();
+			}
+
+			recoveredIngredients.add(
+					new ItemStack(representative.get())
+			);
+		}
+
+		if (slabRule) {
+			recoveredIngredients.addAll(
+					createIngredients(
+							ModItems.GENERIC_WOOD,
+							slabCount / 2
+					)
+			);
+		}
+
+		return Optional.of(recoveredIngredients);
+	}
+
+	private static boolean usesSlabRecoveryRule(Item resultItem) {
+		String path = BuiltInRegistries.ITEM.getKey(resultItem).getPath();
+
+		return switch (path) {
+			case "chiseled_bookshelf",
+				 "lectern",
+				 "daylight_detector",
+				 "composter",
+				 "barrel" -> true;
+
+			default -> false;
+		};
+	}
+
+	private static boolean usesLogRecoveryRule(Item resultItem) {
+		String path = BuiltInRegistries.ITEM.getKey(resultItem).getPath();
+
+		return switch (path) {
+			case "smoker",
+				 "campfire",
+				 "soul_campfire" -> true;
+
+			default -> false;
+		};
+	}
+
+	private static boolean isWoodSlabIngredient(Ingredient ingredient) {
+		List<Holder<Item>> alternatives =
+				ingredient.items().toList();
+
+		return !alternatives.isEmpty()
+				&& alternatives.stream().allMatch(holder -> {
+					String path = BuiltInRegistries.ITEM
+							.getKey(holder.value())
+							.getPath();
+
+					return path.endsWith("_slab")
+							&& isWoodSpecificOutput(holder.value());
+				});
+	}
+
+	private static boolean isWoodLogIngredient(Ingredient ingredient) {
+		List<Holder<Item>> alternatives =
+				ingredient.items().toList();
+
+		return !alternatives.isEmpty()
+				&& alternatives.stream().allMatch(holder -> {
+					String path = BuiltInRegistries.ITEM
+							.getKey(holder.value())
+							.getPath();
+
+					return (
+							path.endsWith("_log")
+							|| path.endsWith("_wood")
+							|| path.endsWith("_stem")
+							|| path.endsWith("_hyphae")
+					) && isWoodSpecificOutput(holder.value());
+				});
+	}
 
 	private static Optional<List<ItemStack>> getMultiOutputIngredients(
 			Item inputItem,
@@ -876,7 +1011,20 @@ public final class RecyclerLogic {
 					continue;
 				}
 
-                boolean validIngredients = true;
+				if (result.getCount() == 1
+						&& usesRecipeSpecificRecovery(result.getItem())) {
+
+					if (getRecipeSpecificIngredients(
+							result.getItem(),
+							ingredients
+					).isPresent()) {
+						return true;
+					}
+
+					continue;
+				}
+
+				boolean validIngredients = true;
 
                 for (Ingredient ingredient : ingredients) {
 					Optional<Item> representative =
@@ -1007,32 +1155,47 @@ public final class RecyclerLogic {
 
 				if (result.getCount() == 1) {
 
-					ingredients = new ArrayList<>(recipeIngredients.size());
+					Optional<List<ItemStack>> recipeSpecificIngredients =
+							getRecipeSpecificIngredients(
+									result.getItem(),
+									recipeIngredients
+							);
 
-					boolean validIngredients = true;
-
-					for (Ingredient ingredient : recipeIngredients) {
-						Optional<Item> representative =
-								getRepresentativeIngredient(
-										ingredient,
-										result.getItem()
-								);
-
-						if (representative.isEmpty()) {
-							validIngredients = false;
-							break;
+					if (usesRecipeSpecificRecovery(result.getItem())) {
+						if (recipeSpecificIngredients.isEmpty()) {
+							continue;
 						}
 
-						ingredients.add(
-								new ItemStack(representative.get())
-						);
-					}
-
-					if (!validIngredients) {
-						continue;
-					}
+						ingredients = recipeSpecificIngredients.get();
 
 					} else {
+						ingredients = new ArrayList<>(recipeIngredients.size());
+
+						boolean validIngredients = true;
+
+						for (Ingredient ingredient : recipeIngredients) {
+							Optional<Item> representative =
+									getRepresentativeIngredient(
+											ingredient,
+											result.getItem()
+									);
+
+							if (representative.isEmpty()) {
+								validIngredients = false;
+								break;
+							}
+
+							ingredients.add(
+									new ItemStack(representative.get())
+							);
+						}
+
+						if (!validIngredients) {
+							continue;
+						}
+					}
+
+				} else {
 
 						Optional<List<ItemStack>> multiOutputIngredients =
 								getMultiOutputIngredients(
@@ -1086,10 +1249,7 @@ public final class RecyclerLogic {
 
 			for (RecoveryRule.PotentialRuleOutput result : ruleResults.get()) {
 				outputs.add(
-						new PotentialOutput(
-								result.stack().copy(),
-								result.chance()
-						)
+						new PotentialOutput(result.stack().copy())
 				);
 			}
 
@@ -1160,29 +1320,45 @@ public final class RecyclerLogic {
 				List<ItemStack> ingredients;
 
 				if (result.getCount() == 1) {
-					ingredients = new ArrayList<>(recipeIngredients.size());
 
-					boolean validIngredients = true;
+					Optional<List<ItemStack>> recipeSpecificIngredients =
+							getRecipeSpecificIngredients(
+									result.getItem(),
+									recipeIngredients
+							);
 
-					for (Ingredient ingredient : recipeIngredients) {
-						Optional<Item> representative =
-								getRepresentativeIngredient(
-										ingredient,
-										result.getItem()
-								);
-
-						if (representative.isEmpty()) {
-							validIngredients = false;
-							break;
+					if (usesRecipeSpecificRecovery(result.getItem())) {
+						if (recipeSpecificIngredients.isEmpty()) {
+							continue;
 						}
 
-						ingredients.add(
-								new ItemStack(representative.get())
-						);
-					}
+						ingredients = recipeSpecificIngredients.get();
 
-					if (!validIngredients) {
-						continue;
+					} else {
+						ingredients = new ArrayList<>(recipeIngredients.size());
+
+						boolean validIngredients = true;
+
+						for (Ingredient ingredient : recipeIngredients) {
+							Optional<Item> representative =
+									getRepresentativeIngredient(
+											ingredient,
+											result.getItem()
+									);
+
+							if (representative.isEmpty()) {
+								validIngredients = false;
+								break;
+							}
+
+							ingredients.add(
+									new ItemStack(representative.get())
+							);
+						}
+
+						if (!validIngredients) {
+							continue;
+						}
 					}
 
 				} else {
@@ -1216,16 +1392,9 @@ public final class RecyclerLogic {
 	) {
 		List<PotentialOutput> outputs = new ArrayList<>();
 
-		if (ingredients.isEmpty()) {
-			return outputs;
-		}
-
 		for (ItemStack ingredient : ingredients) {
 			outputs.add(
-					new PotentialOutput(
-							ingredient.copy(),
-							50.0
-					)
+					new PotentialOutput(ingredient.copy())
 			);
 		}
 

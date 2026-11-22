@@ -16,7 +16,6 @@ import com.mojang.brigadier.Command;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.Optional;
 
 public class RecyclerMod implements ModInitializer {
@@ -183,7 +182,7 @@ public class RecyclerMod implements ModInitializer {
 			report.append("\nPOTENTIAL RECOVERY:\n");
 
 			if (outputs.get().isEmpty()) {
-				report.append("  No outputs (all configured chances may be 0%)\n");
+				report.append("  No potential outputs.\n");
 			}
 
 			for (RecyclerLogic.PotentialOutput output : outputs.get()) {
@@ -200,13 +199,7 @@ public class RecyclerMod implements ModInitializer {
 						.append(BuiltInRegistries.ITEM.getKey(stack.getItem()))
 						.append("] x")
 						.append(stack.getCount())
-						.append(" - ")
-						.append(String.format(
-								Locale.ROOT,
-								"%.1f",
-								output.chance()
-						))
-						.append("%\n");
+						.append("\n");
 			}
 
 			report.append("\n--------------------------------------------------\n\n");
