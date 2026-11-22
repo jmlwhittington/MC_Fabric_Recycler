@@ -544,139 +544,6 @@ public final class RecyclerLogic {
 		return BuiltInRegistries.ITEM.getOptional(plankId);
 	}
 
-	private static boolean isStairOrSlab(Item item) {
-		String path = BuiltInRegistries.ITEM.getKey(item).getPath();
-
-		return path.endsWith("_stairs")
-				|| path.endsWith("_slab");
-	}
-
-	private static Optional<Item> getStairSlabSourceItem(Item item) {
-		Identifier inputId = BuiltInRegistries.ITEM.getKey(item);
-		String path = inputId.getPath();
-
-		String suffix;
-
-		if (path.endsWith("_stairs")) {
-			suffix = "_stairs";
-		} else if (path.endsWith("_slab")) {
-			suffix = "_slab";
-		} else {
-			return Optional.empty();
-		}
-
-		String base = path.substring(
-				0,
-				path.length() - suffix.length()
-		);
-
-		List<String> candidates = new ArrayList<>();
-
-		candidates.add(base + "s");
-		candidates.add(base + "_planks");
-		candidates.add(base + "_block");
-		candidates.add(base);
-
-		for (String candidate : candidates) {
-			Identifier candidateId = Identifier.fromNamespaceAndPath(
-					inputId.getNamespace(),
-					candidate
-			);
-
-			Optional<Item> source =
-					BuiltInRegistries.ITEM.getOptional(candidateId);
-
-			if (source.isPresent()) {
-				return source;
-			}
-		}
-
-		return Optional.empty();
-	}
-
-	private static Optional<List<ItemStack>> getRecipeIngredientsForOutput(
-			Level level,
-			Item outputItem,
-			Item ingredientContext
-	) {
-		List<RecipeHolder<?>> recipes = new ArrayList<>(
-				level.getServer().getRecipeManager().getRecipes()
-		);
-
-		recipes.sort(
-				Comparator.comparing(
-						holder -> holder.id().identifier().toString()
-				)
-		);
-
-		for (RecipeHolder<?> holder : recipes) {
-			Recipe<?> recipe = holder.value();
-
-			if (recipe.getClass() != ShapedRecipe.class
-					&& recipe.getClass() != ShapelessRecipe.class) {
-				continue;
-			}
-
-			if (recipe.getType() != RecipeType.CRAFTING) {
-				continue;
-			}
-
-			try {
-				ItemStack result = getStaticResult(recipe);
-
-				if (result.isEmpty()
-						|| result.getItem() != outputItem) {
-					continue;
-				}
-
-				if (result.getCount() == 1) {
-					NormalCraftingRecipe craftingRecipe =
-							(NormalCraftingRecipe) recipe;
-
-					if (craftingRecipe.placementInfo()
-							.ingredients().size() <= 1) {
-						continue;
-					}
-				}
-
-				NormalCraftingRecipe craftingRecipe =
-						(NormalCraftingRecipe) recipe;
-
-				List<Ingredient> ingredients =
-						craftingRecipe.placementInfo().ingredients();
-
-				Optional<List<ItemStack>> recovered =
-						getRecipeIngredients(
-								ingredientContext,
-								result.getCount(),
-								ingredients
-						);
-
-				if (recovered.isPresent()) {
-					return recovered;
-				}
-
-			} catch (RuntimeException exception) {
-			}
-		}
-
-		return Optional.empty();
-	}
-
-	private static double getStairSlabChance(Item item) {
-		String path = BuiltInRegistries.ITEM.getKey(item).getPath();
-
-		if (path.endsWith("_stairs")) {
-			return 0.75;
-		}
-
-		if (path.endsWith("_slab")) {
-			return 0.50;
-		}
-
-		return 0.0;
-	}
-
 	private static Optional<List<ItemStack>> getSpecialIngredients(
 			ItemStack input
 	) {
@@ -1396,25 +1263,6 @@ public final class RecyclerLogic {
 					new ItemStack(crackedBase.get())
 			);
 		}
-		
-		if (getSpecialIngredients(input).isPresent()) {
-			return true;
-		}
-
-		if (isStairOrSlab(input.getItem())) {
-			Optional<Item> source =
-					getStairSlabSourceItem(input.getItem());
-
-			if (source.isEmpty()) {
-				return false;
-			}
-
-			return getRecipeIngredientsForOutput(
-					level,
-					source.get(),
-					source.get()
-			).isPresent();
-		}
 
 		Item recipeInput = getRecipeLookupItem(input);
 		
@@ -1546,36 +1394,6 @@ public final class RecyclerLogic {
 		if (specialIngredients.isPresent()) {
 			return Optional.of(
 					rollRecovery(specialIngredients.get())
-			);
-		}
-
-		if (isStairOrSlab(input.getItem())) {
-			Optional<Item> source =
-					getStairSlabSourceItem(input.getItem());
-
-			if (source.isEmpty()) {
-				return Optional.empty();
-			}
-
-			Optional<List<ItemStack>> sourceIngredients =
-					getRecipeIngredientsForOutput(
-							level,
-							source.get(),
-							source.get()
-					);
-
-			if (sourceIngredients.isEmpty()) {
-				return Optional.empty();
-			}
-
-			double chance = getStairSlabChance(input.getItem());
-
-			if (RANDOM.nextDouble() >= chance) {
-				return Optional.of(new ArrayList<>());
-			}
-
-			return Optional.of(
-					rollRecovery(sourceIngredients.get())
 			);
 		}
 
@@ -1738,30 +1556,6 @@ public final class RecyclerLogic {
 		if (specialIngredients.isPresent()) {
 			return Optional.of(
 					calculatePotentialOutputs(specialIngredients.get())
-			);
-		}
-
-		if (isStairOrSlab(input.getItem())) {
-			Optional<Item> source =
-					getStairSlabSourceItem(input.getItem());
-
-			if (source.isEmpty()) {
-				return Optional.empty();
-			}
-
-			Optional<List<ItemStack>> sourceIngredients =
-					getRecipeIngredientsForOutput(
-							level,
-							source.get(),
-							source.get()
-					);
-
-			if (sourceIngredients.isEmpty()) {
-				return Optional.empty();
-			}
-
-			return Optional.of(
-					calculatePotentialOutputs(sourceIngredients.get())
 			);
 		}
 

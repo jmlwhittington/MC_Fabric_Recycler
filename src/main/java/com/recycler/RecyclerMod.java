@@ -19,14 +19,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.entries.LootItem;
-import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.level.storage.loot.LootContext;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.level.storage.loot.predicates.LootPredicates;
 import com.mojang.brigadier.Command;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -183,9 +177,11 @@ public class RecyclerMod implements ModInitializer {
 				return;
 			}
 
-			ItemStack tool = context.getParamOrNull(LootContextParams.TOOL);
+			var silkTouchPredicate = context.getResolver()
+					.lookupOrThrow(Registries.PREDICATE)
+					.getOrThrow(LootPredicates.TOOL_CAN_SILK_TOUCH);
 
-			if (tool != null && EnchantmentHelper.hasSilkTouch(tool)) {
+			if (silkTouchPredicate.value().test(context)) {
 				return;
 			}
 
