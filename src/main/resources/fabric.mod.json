@@ -3,7 +3,7 @@
   "id": "recycler",
   "version": "${version}",
   "name": "Recycler",
-  "description": "A machine that attempts to recover crafting ingredients from crafted items.",
+  "description": "A vanilla-styled machine for recovering some ingredients from items! Dynamically pulls from recipe table, plus custom rules config!",
   "environment": "*",
   "entrypoints": {
     "main": [
